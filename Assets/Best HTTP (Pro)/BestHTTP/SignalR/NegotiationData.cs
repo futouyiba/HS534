@@ -1,9 +1,23 @@
-﻿using System;
+/*
+http://www.cgsoso.com/forum-211-1.html
+
+CG搜搜 Unity3d 每日Unity3d插件免费更新 更有VIP资源！
+
+CGSOSO 主打游戏开发，影视设计等CG资源素材。
+
+插件如若商用，请务必官网购买！
+
+daily assets update for try.
+
+U should buy the asset from home store if u use it in your project!
+*/
+
+#if !BESTHTTP_DISABLE_SIGNALR
+
+using System;
 using System.Collections.Generic;
 
-using BestHTTP;
 using BestHTTP.JSON;
-using BestHTTP.SignalR.Transports;
 
 namespace BestHTTP.SignalR
 {
@@ -209,11 +223,18 @@ namespace BestHTTP.SignalR
                     this.KeepAliveTimeout =  TimeSpan.FromSeconds(GetDouble(dict, "KeepAliveTimeout"));
 
                 this.DisconnectTimeout = TimeSpan.FromSeconds(GetDouble(dict, "DisconnectTimeout"));
-                this.ConnectionTimeout = TimeSpan.FromSeconds(GetDouble(dict, "ConnectionTimeout"));
+
+                if (dict.ContainsKey("ConnectionTimeout"))
+                    this.ConnectionTimeout = TimeSpan.FromSeconds(GetDouble(dict, "ConnectionTimeout"));
+                else
+                    this.ConnectionTimeout = TimeSpan.FromSeconds(120);
+
                 this.TryWebSockets = (bool)Get(dict, "TryWebSockets");
                 this.ProtocolVersion = GetString(dict, "ProtocolVersion");
                 this.TransportConnectTimeout = TimeSpan.FromSeconds(GetDouble(dict, "TransportConnectTimeout"));
-                this.LongPollDelay = TimeSpan.FromSeconds(GetDouble(dict, "LongPollDelay"));
+
+                if (dict.ContainsKey("LongPollDelay"))
+                    this.LongPollDelay = TimeSpan.FromSeconds(GetDouble(dict, "LongPollDelay"));
             }
             catch(Exception ex)
             {
@@ -265,3 +286,5 @@ namespace BestHTTP.SignalR
         #endregion
     }
 }
+
+#endif

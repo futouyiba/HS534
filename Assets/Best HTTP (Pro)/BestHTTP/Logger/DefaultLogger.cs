@@ -1,4 +1,18 @@
-﻿using System;
+/*
+http://www.cgsoso.com/forum-211-1.html
+
+CG搜搜 Unity3d 每日Unity3d插件免费更新 更有VIP资源！
+
+CGSOSO 主打游戏开发，影视设计等CG资源素材。
+
+插件如若商用，请务必官网购买！
+
+daily assets update for try.
+
+U should buy the asset from home store if u use it in your project!
+*/
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,7 +22,7 @@ namespace BestHTTP.Logger
     /// <summary>
     /// A basic logger implementation to be able to log intelligently additional informations about the plugin's internal mechanism.
     /// </summary>
-    public class DefaultLogger : ILogger
+    public class DefaultLogger : BestHTTP.Logger.ILogger
     {
         public Loglevels Level { get; set; }
         public string FormatVerbose { get; set; }
@@ -86,7 +100,33 @@ namespace BestHTTP.Logger
             {
                 try
                 {
-                    UnityEngine.Debug.LogError(string.Format(FormatEx, division, msg, ex != null ? ex.Message : "null", ex != null ? ex.StackTrace : "null"));
+                    string exceptionMessage = string.Empty;
+                    if (ex == null)
+                        exceptionMessage = "null";
+                    else
+                    {
+                        StringBuilder sb = new StringBuilder();
+
+                        Exception exception = ex;
+                        int counter = 1;
+                        while (exception != null)
+                        {
+                            sb.AppendFormat("{0}: {1} {2}", counter++.ToString(), ex.Message, ex.StackTrace);
+
+                            exception = exception.InnerException;
+
+                            if (exception != null)
+                                sb.AppendLine();
+                        }
+
+                        exceptionMessage = sb.ToString();
+                    }
+
+                    UnityEngine.Debug.LogError(string.Format(FormatEx,
+                                                                division,
+                                                                msg,
+                                                                exceptionMessage,
+                                                                ex != null ? ex.StackTrace : "null"));
                 }
                 catch
                 { }

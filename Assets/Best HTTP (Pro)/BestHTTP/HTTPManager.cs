@@ -1,8 +1,26 @@
-﻿using System;
+/*
+http://www.cgsoso.com/forum-211-1.html
+
+CG搜搜 Unity3d 每日Unity3d插件免费更新 更有VIP资源！
+
+CGSOSO 主打游戏开发，影视设计等CG资源素材。
+
+插件如若商用，请务必官网购买！
+
+daily assets update for try.
+
+U should buy the asset from home store if u use it in your project!
+*/
+
+using System;
 using System.Collections.Generic;
-    
+
 using UnityEngine;
-using BestHTTP.Caching;
+
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
+    using BestHTTP.Caching;
+#endif
+
 using BestHTTP.Extensions;
 using BestHTTP.Logger;
 using BestHTTP.Statistics;
@@ -10,7 +28,7 @@ using BestHTTP.Statistics;
 namespace BestHTTP
 {
     /// <summary>
-    /// 
+    ///
     /// </summary>
     public static class HTTPManager
     {
@@ -21,7 +39,11 @@ namespace BestHTTP
             KeepAliveDefaultValue = true;
             MaxPathLength = 255;
             MaxConnectionIdleTime = TimeSpan.FromSeconds(30);
+
+#if !BESTHTTP_DISABLE_COOKIES && (!UNITY_WEBGL || UNITY_EDITOR)
             IsCookiesEnabled = true;
+#endif
+
             CookieJarSize = 10 * 1024 * 1024;
             EnablePrivateBrowsing = false;
             ConnectTimeout = TimeSpan.FromSeconds(20);
@@ -30,8 +52,10 @@ namespace BestHTTP
             // Set the default logger mechanism
             logger = new BestHTTP.Logger.DefaultLogger();
 
+#if !BESTHTTP_DISABLE_ALTERNATE_SSL && (!UNITY_WEBGL || UNITY_EDITOR)
             DefaultCertificateVerifyer = null;
             UseAlternateSSLDefaultValue = false;
+#endif
         }
 
         #region Global Options
@@ -56,20 +80,24 @@ namespace BestHTTP
         /// </summary>
         public static bool KeepAliveDefaultValue { get; set; }
 
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
         /// <summary>
         /// Set to true, if caching is prohibited.
         /// </summary>
         public static bool IsCachingDisabled { get; set; }
+#endif
 
         /// <summary>
-        /// How many time must be passed to destroy that connection after a connection finished it's last request. It's default value is two minutes.
+        /// How many time must be passed to destroy that connection after a connection finished it's last request. It's default value is 30 seconds.
         /// </summary>
         public static TimeSpan MaxConnectionIdleTime { get; set; }
 
+#if !BESTHTTP_DISABLE_COOKIES && (!UNITY_WEBGL || UNITY_EDITOR)
         /// <summary>
         /// Set to false to disable all Cookie. It's default value is true.
         /// </summary>
         public static bool IsCookiesEnabled { get; set; }
+#endif
 
         /// <summary>
         /// Size of the Cookie Jar in bytes. It's default value is 10485760 (10 MB).
@@ -91,17 +119,21 @@ namespace BestHTTP
         /// </summary>
         public static TimeSpan RequestTimeout { get; set; }
 
+#if !((BESTHTTP_DISABLE_CACHING && BESTHTTP_DISABLE_COOKIES) || (UNITY_WEBGL && !UNITY_EDITOR))
         /// <summary>
         /// By default the plugin will save all cache and cookie data under the path returned by Application.persistentDataPath.
         /// You can assign a function to this delegate to return a custom root path to define a new path.
         /// <remarks>This delegate will be called on a non Unity thread!</remarks>
         /// </summary>
         public static System.Func<string> RootCacheFolderProvider { get; set; }
+#endif
 
+#if !BESTHTTP_DISABLE_PROXY
         /// <summary>
         /// The global, default proxy for all HTTPRequests. The HTTPRequest's Proxy still can be changed per-request. Default value is null.
         /// </summary>
         public static HTTPProxy Proxy { get; set; }
+#endif
 
         /// <summary>
         /// Heartbeat manager to use less threads in the plugin. The heartbeat updates are called from the OnUpdate function.
@@ -118,13 +150,13 @@ namespace BestHTTP
         private static HeartbeatManager heartbeats;
 
         /// <summary>
-        /// A basic ILogger implementation to be able to log intelligently additional informations about the plugin's internal mechanism.
+        /// A basic BestHTTP.Logger.ILogger implementation to be able to log intelligently additional informations about the plugin's internal mechanism.
         /// </summary>
-        public static ILogger Logger
+        public static BestHTTP.Logger.ILogger Logger
         {
             get
             {
-                // Make sure that it 
+                // Make sure that it has a valid logger instance.
                 if (logger == null)
                 {
                     logger = new DefaultLogger();
@@ -136,20 +168,27 @@ namespace BestHTTP
 
             set { logger = value; }
         }
-        private static ILogger logger;
+        private static BestHTTP.Logger.ILogger logger;
 
+#if !BESTHTTP_DISABLE_ALTERNATE_SSL && (!UNITY_WEBGL || UNITY_EDITOR)
         /// <summary>
         /// The default ICertificateVerifyer implementation that the plugin will use when the request's UseAlternateSSL property is set to true.
         /// </summary>
         public static Org.BouncyCastle.Crypto.Tls.ICertificateVerifyer DefaultCertificateVerifyer { get; set; }
 
         /// <summary>
+        /// The default IClientCredentialsProvider implementation that the plugin will use when the request's UseAlternateSSL property is set to true.
+        /// </summary>
+        public static Org.BouncyCastle.Crypto.Tls.IClientCredentialsProvider DefaultClientCredentialsProvider { get; set; }
+
+        /// <summary>
         /// The default value for the HTTPRequest's UseAlternateSSL property.
         /// </summary>
         public static bool UseAlternateSSLDefaultValue { get; set; }
+#endif
 
         /// <summary>
-        /// On most systems the maximum length of a path is around 255 character. If a cache entity's path is longer than this value it doesn't get cached. There no patform independent API to query the exact value on the current system, but it's 
+        /// On most systems the maximum length of a path is around 255 character. If a cache entity's path is longer than this value it doesn't get cached. There no patform independent API to query the exact value on the current system, but it's
         /// exposed here and can be overridden. It's default value is 255.
         /// </summary>
         internal static int MaxPathLength { get; set; }
@@ -161,22 +200,22 @@ namespace BestHTTP
         /// <summary>
         /// All connection has a reference in this Dictionary untill it's removed completly.
         /// </summary>
-        private static Dictionary<string, List<HTTPConnection>> Connections = new Dictionary<string, List<HTTPConnection>>();
+        private static Dictionary<string, List<ConnectionBase>> Connections = new Dictionary<string, List<ConnectionBase>>();
 
         /// <summary>
         /// Active connections. These connections all has a request to process.
         /// </summary>
-        private static List<HTTPConnection> ActiveConnections = new List<HTTPConnection>();
+        private static List<ConnectionBase> ActiveConnections = new List<ConnectionBase>();
 
         /// <summary>
         /// Free connections. They can be removed completly after a specified time.
         /// </summary>
-        private static List<HTTPConnection> FreeConnections = new List<HTTPConnection>();
+        private static List<ConnectionBase> FreeConnections = new List<ConnectionBase>();
 
         /// <summary>
         /// Connections that recycled in the Update loop. If they are not used in the same loop to process a request, they will be transferred to the FreeConnections list.
         /// </summary>
-        private static List<HTTPConnection> RecycledConnections = new List<HTTPConnection>();
+        private static List<ConnectionBase> RecycledConnections = new List<ConnectionBase>();
 
         /// <summary>
         /// List of request that have to wait until there is a free connection to the server.
@@ -193,8 +232,14 @@ namespace BestHTTP
         public static void Setup()
         {
             HTTPUpdateDelegator.CheckInstance();
+
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
             HTTPCacheService.CheckSetup();
+#endif
+
+#if !BESTHTTP_DISABLE_COOKIES && (!UNITY_WEBGL || UNITY_EDITOR)
             Cookies.CookieJar.SetupFolder();
+#endif
         }
 
         public static HTTPRequest SendRequest(string url, OnRequestFinishedDelegate callback)
@@ -244,7 +289,7 @@ namespace BestHTTP
             stat.QueryFlags = queryFlags;
 
             if ((queryFlags & StatisticsQueryFlags.Connections) != 0)
-            { 
+            {
                 int connections = 0;
                 foreach(var conn in HTTPManager.Connections)
                 {
@@ -252,19 +297,30 @@ namespace BestHTTP
                         connections += conn.Value.Count;
                 }
 
+#if !BESTHTTP_DISABLE_WEBSOCKET && UNITY_WEBGL && !UNITY_EDITOR
+                connections += WebSocket.WebSocket.WebSockets.Count;
+#endif
+
                 stat.Connections = connections;
-                stat.ActiveConnections = ActiveConnections.Count;
+                stat.ActiveConnections = ActiveConnections.Count
+#if !BESTHTTP_DISABLE_WEBSOCKET && UNITY_WEBGL && !UNITY_EDITOR
+                                         + WebSocket.WebSocket.WebSockets.Count
+#endif
+                ;
                 stat.FreeConnections = FreeConnections.Count;
                 stat.RecycledConnections = RecycledConnections.Count;
                 stat.RequestsInQueue = RequestQueue.Count;
             }
 
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
             if ((queryFlags & StatisticsQueryFlags.Cache) != 0)
             {
                 stat.CacheEntityCount = HTTPCacheService.GetCacheEntityCount();
                 stat.CacheSize = HTTPCacheService.GetCacheSize();
             }
+#endif
 
+#if !BESTHTTP_DISABLE_COOKIES && (!UNITY_WEBGL || UNITY_EDITOR)
             if ((queryFlags & StatisticsQueryFlags.Cookies) != 0)
             {
                 List<Cookies.Cookie> cookies = Cookies.CookieJar.GetAll();
@@ -274,6 +330,7 @@ namespace BestHTTP
                     cookiesSize += cookies[i].GuessSize();
                 stat.CookieJarSize = cookiesSize;
             }
+#endif
 
             return stat;
         }
@@ -284,7 +341,7 @@ namespace BestHTTP
 
         private static void SendRequestImpl(HTTPRequest request)
         {
-            HTTPConnection conn = FindOrCreateFreeConnection(request);
+            ConnectionBase conn = FindOrCreateFreeConnection(request);
 
             if (conn != null)
             {
@@ -311,16 +368,37 @@ namespace BestHTTP
 
         private static string GetKeyForRequest(HTTPRequest request)
         {
+            if (request.CurrentUri.IsFile)
+                return request.CurrentUri.ToString();
+
             // proxyUri + requestUri
             // HTTP and HTTPS needs different connections.
-            return (request.Proxy != null ? new UriBuilder(request.Proxy.Address.Scheme, request.Proxy.Address.Host, request.Proxy.Address.Port).Uri.ToString() : string.Empty) +
+            return
+#if !BESTHTTP_DISABLE_PROXY
+                (request.Proxy != null ? new UriBuilder(request.Proxy.Address.Scheme, request.Proxy.Address.Host, request.Proxy.Address.Port).Uri.ToString() : string.Empty) +
+#endif
                                             new UriBuilder(request.CurrentUri.Scheme, request.CurrentUri.Host, request.CurrentUri.Port).Uri.ToString();
         }
 
-        private static HTTPConnection FindOrCreateFreeConnection(HTTPRequest request)
+        /// <summary>
+        /// Factory method to create a concrete connection object.
+        /// </summary>
+        private static ConnectionBase CreateConnection(HTTPRequest request, string serverUrl)
         {
-            HTTPConnection conn = null;
-            List<HTTPConnection> connections;
+            if (request.CurrentUri.IsFile)
+                return new FileConnection(serverUrl);
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+            return new WebGLConnection(serverUrl);
+#else
+            return new HTTPConnection(serverUrl);
+#endif
+        }
+
+        private static ConnectionBase FindOrCreateFreeConnection(HTTPRequest request)
+        {
+            ConnectionBase conn = null;
+            List<ConnectionBase> connections;
 
             string serverUrl = GetKeyForRequest(request);
 
@@ -339,16 +417,19 @@ namespace BestHTTP
                     {
                         var tmpConn = connections[i];
 
-                        if (tmpConn != null && 
+                        if (tmpConn != null &&
                             tmpConn.IsFree &&
-                            (!tmpConn.HasProxy || 
-                             tmpConn.LastProcessedUri == null || 
+                            (
+#if !BESTHTTP_DISABLE_PROXY
+                            !tmpConn.HasProxy ||
+#endif
+                             tmpConn.LastProcessedUri == null ||
                              tmpConn.LastProcessedUri.Host.Equals(request.CurrentUri.Host, StringComparison.OrdinalIgnoreCase)))
                             conn = tmpConn;
                     }
             }
             else
-                Connections.Add(serverUrl, connections = new List<HTTPConnection>(MaxConnectionPerServer));
+                Connections.Add(serverUrl, connections = new List<ConnectionBase>(MaxConnectionPerServer));
 
             // No free connection found?
             if (conn == null)
@@ -358,7 +439,7 @@ namespace BestHTTP
                     return null;
 
                 // if no, create a new one
-                connections.Add(conn = new HTTPConnection(serverUrl));
+                connections.Add(conn = CreateConnection(request, serverUrl));
             }
 
             return conn;
@@ -376,11 +457,17 @@ namespace BestHTTP
             return false;
         }
 
-        private static void RecycleConnection(HTTPConnection conn)
+        private static void RecycleConnection(ConnectionBase conn)
         {
-            conn.Recycle();
+            conn.Recycle(OnConnectionRecylced);
+        }
 
-            RecycledConnections.Add(conn);
+        private static void OnConnectionRecylced(ConnectionBase conn)
+        {
+            lock (RecycledConnections)
+            {
+                RecycledConnections.Add(conn);
+            }
         }
 
         #endregion
@@ -388,9 +475,9 @@ namespace BestHTTP
         #region Internal Helper Functions
 
         /// <summary>
-        /// Will return the HTTPConnection object that processing the given request.
+        /// Will return the ConnectionBase object that processing the given request.
         /// </summary>
-        internal static HTTPConnection GetConnectionWith(HTTPRequest request)
+        internal static ConnectionBase GetConnectionWith(HTTPRequest request)
         {
             lock (Locker)
             {
@@ -410,6 +497,7 @@ namespace BestHTTP
             return RequestQueue.Remove(request);
         }
 
+#if !((BESTHTTP_DISABLE_CACHING && BESTHTTP_DISABLE_COOKIES) || (UNITY_WEBGL && !UNITY_EDITOR))
         /// <summary>
         /// Will return where the various caches should be saved.
         /// </summary>
@@ -431,6 +519,7 @@ namespace BestHTTP
             return Application.persistentDataPath;
 #endif
         }
+#endif
 
         #endregion
 
@@ -448,7 +537,7 @@ namespace BestHTTP
                 {
                     for (int i = 0; i < ActiveConnections.Count; ++i)
                     {
-                        HTTPConnection conn = ActiveConnections[i];
+                        ConnectionBase conn = ActiveConnections[i];
 
                         switch (conn.State)
                         {
@@ -547,6 +636,10 @@ namespace BestHTTP
                                 // It will remove from the ActiveConnections
                                 RecycleConnection(conn);
                                 break;
+
+                            case HTTPConnectionStates.Free:
+                                RecycleConnection(conn);
+                                break;
                         }
                     }
                 }
@@ -555,20 +648,23 @@ namespace BestHTTP
                     IsCallingCallbacks = false;
                 }
 
-                if (RecycledConnections.Count > 0)
+                lock (RecycledConnections)
                 {
-                    for (int i = 0; i < RecycledConnections.Count; ++i)
+                    if (RecycledConnections.Count > 0)
                     {
-                        var connection = RecycledConnections[i];
-                        // If in a callback made a request that aquired this connection, then we will not remove it from the
-                        //  active connections.
-                        if (connection.IsFree)
+                        for (int i = 0; i < RecycledConnections.Count; ++i)
                         {
-                            ActiveConnections.Remove(connection);
-                            FreeConnections.Add(connection);
+                            var connection = RecycledConnections[i];
+                            // If in a callback made a request that aquired this connection, then we will not remove it from the
+                            //  active connections.
+                            if (connection.IsFree)
+                            {
+                                ActiveConnections.Remove(connection);
+                                FreeConnections.Add(connection);
+                            }
                         }
+                        RecycledConnections.Clear();
                     }
-                    RecycledConnections.Clear();
                 }
 
                 if (FreeConnections.Count > 0)
@@ -579,7 +675,7 @@ namespace BestHTTP
                         if (connection.IsRemovable)
                         {
                             // Remove the connection from the connection reference table
-                            List<HTTPConnection> connections = null;
+                            List<ConnectionBase> connections = null;
                             if (Connections.TryGetValue(connection.ServerAddress, out connections))
                                 connections.Remove(connection);
 
@@ -591,7 +687,7 @@ namespace BestHTTP
                         }
                     }
 
-                
+
                 if (CanProcessFromQueue())
                 {
                     // Sort the queue by priority, only if we have to
@@ -612,20 +708,32 @@ namespace BestHTTP
                 heartbeats.Update();
         }
 
-        internal static void OnQuit()
+        public static void OnQuit()
         {
             lock (Locker)
             {
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
                 Caching.HTTPCacheService.SaveLibrary();
+#endif
+
+                var queue = RequestQueue.ToArray();
+                RequestQueue.Clear();
+                foreach (var req in queue)
+                    req.Abort();
 
                 // Close all tcp connections when the application is terminating.
                 foreach (var kvp in Connections)
                 {
                     foreach (var conn in kvp.Value)
+                    {
+                        conn.Abort(HTTPConnectionStates.Closed);
                         conn.Dispose();
+                    }
                     kvp.Value.Clear();
                 }
                 Connections.Clear();
+
+                OnUpdate();
             }
         }
 

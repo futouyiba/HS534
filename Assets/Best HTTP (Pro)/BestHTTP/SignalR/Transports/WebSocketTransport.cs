@@ -1,4 +1,21 @@
-﻿using System;
+/*
+http://www.cgsoso.com/forum-211-1.html
+
+CG搜搜 Unity3d 每日Unity3d插件免费更新 更有VIP资源！
+
+CGSOSO 主打游戏开发，影视设计等CG资源素材。
+
+插件如若商用，请务必官网购买！
+
+daily assets update for try.
+
+U should buy the asset from home store if u use it in your project!
+*/
+
+#if !BESTHTTP_DISABLE_SIGNALR
+#if !BESTHTTP_DISABLE_WEBSOCKET
+
+using System;
 using System.Text;
 
 using BestHTTP;
@@ -55,8 +72,10 @@ namespace BestHTTP.SignalR.Transports
             wSocket.OnClosed += WSocket_OnClosed;
             wSocket.OnErrorDesc += WSocket_OnError;
 
+#if !UNITY_WEBGL || UNITY_EDITOR
             // prepare the internal http request
             Connection.PrepareRequest(wSocket.InternalRequest, requestType);
+#endif
 
             // start opening the websocket protocol
             wSocket.Open();
@@ -70,7 +89,7 @@ namespace BestHTTP.SignalR.Transports
 
         public override void Stop()
         {
-            if (wSocket != null && wSocket.IsOpen)
+            if (wSocket != null)
             {
                 wSocket.OnOpen = null;
                 wSocket.OnMessage = null;
@@ -99,9 +118,9 @@ namespace BestHTTP.SignalR.Transports
             }
         }
 
-        #endregion
+#endregion
 
-        #region WebSocket Events
+#region WebSocket Events
 
         void WSocket_OnOpen(WebSocket.WebSocket webSocket)
         {
@@ -159,6 +178,9 @@ namespace BestHTTP.SignalR.Transports
             }
         }
 
-        #endregion
+#endregion
     }
 }
+
+#endif
+#endif

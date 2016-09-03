@@ -24,10 +24,10 @@ labels:
 - ios
 - webrequest
 - signalr
-- server-sentevents
 - eventsource
 - server-sent
 - events
+- server-sentevents
 - authentication
 - samsung
 - smart

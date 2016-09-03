@@ -1,8 +1,22 @@
-﻿using System;
-using System.Text;
+/*
+http://www.cgsoso.com/forum-211-1.html
+
+CG搜搜 Unity3d 每日Unity3d插件免费更新 更有VIP资源！
+
+CGSOSO 主打游戏开发，影视设计等CG资源素材。
+
+插件如若商用，请务必官网购买！
+
+daily assets update for try.
+
+U should buy the asset from home store if u use it in your project!
+*/
+
+#if !BESTHTTP_DISABLE_SIGNALR
+
+using System;
 using System.Collections.Generic;
 
-using BestHTTP.SignalR;
 using BestHTTP.SignalR.Messages;
 using BestHTTP.SignalR.JsonEncoders;
 
@@ -128,16 +142,28 @@ namespace BestHTTP.SignalR.Transports
 
             this.State = TransportStates.Starting;
 
-            var request = new HTTPRequest(Connection.BuildUri(RequestTypes.Start, this), HTTPMethods.Get, true, true, OnStartRequestFinished);
-            
-            request.Tag = 0;
-            request.DisableRetry = true;
+            if (this.Connection.Protocol > ProtocolVersions.Protocol_2_0)
+            {
+                var request = new HTTPRequest(Connection.BuildUri(RequestTypes.Start, this), HTTPMethods.Get, true, true, OnStartRequestFinished);
 
-            request.Timeout = Connection.NegotiationResult.ConnectionTimeout + TimeSpan.FromSeconds(10);
+                request.Tag = 0;
+                request.DisableRetry = true;
 
-            Connection.PrepareRequest(request, RequestTypes.Start);
+                request.Timeout = Connection.NegotiationResult.ConnectionTimeout + TimeSpan.FromSeconds(10);
 
-            request.Send();
+                Connection.PrepareRequest(request, RequestTypes.Start);
+
+                request.Send();
+            }
+            else
+            {
+                // The transport and the signalr protocol now started
+                this.State = TransportStates.Started;
+
+                Started();
+
+                Connection.TransportStarted();
+            }
         }
 
         private void OnStartRequestFinished(HTTPRequest req, HTTPResponse resp)
@@ -362,3 +388,5 @@ namespace BestHTTP.SignalR.Transports
         #endregion
     }
 }
+
+#endif

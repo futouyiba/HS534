@@ -1,17 +1,37 @@
-﻿using System;
+/*
+http://www.cgsoso.com/forum-211-1.html
+
+CG搜搜 Unity3d 每日Unity3d插件免费更新 更有VIP资源！
+
+CGSOSO 主打游戏开发，影视设计等CG资源素材。
+
+插件如若商用，请务必官网购买！
+
+daily assets update for try.
+
+U should buy the asset from home store if u use it in your project!
+*/
+
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-#if (!UNITY_WP8 && !UNITY_WINRT && !UNITY_METRO) || UNITY_EDITOR
-using System.Net.Sockets;
+#if !NETFX_CORE || UNITY_EDITOR
+    using System.Net.Sockets;
 #endif
 
 namespace BestHTTP
 {
-    using BestHTTP.Caching;
-    using BestHTTP.Cookies;
+    #if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
+        using BestHTTP.Caching;
+    #endif
+
     using BestHTTP.Extensions;
+
+    #if !BESTHTTP_DISABLE_COOKIES && (!UNITY_WEBGL || UNITY_EDITOR)
+        using BestHTTP.Cookies;
+    #endif
 
     public interface IProtocol
     {
@@ -59,10 +79,12 @@ namespace BestHTTP
         /// </summary>
         public bool IsStreamingFinished { get; internal set; }
 
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
         /// <summary>
         /// Indicates that the response body is read from the cache.
         /// </summary>
         public bool IsFromCache { get; internal set; }
+#endif
 
         /// <summary>
         /// The headers that sent from the server.
@@ -79,10 +101,12 @@ namespace BestHTTP
         /// </summary>
         public bool IsUpgraded { get; protected set; }
 
+#if !BESTHTTP_DISABLE_COOKIES && (!UNITY_WEBGL || UNITY_EDITOR)
         /// <summary>
         /// The cookies that the server sent to the client.
         /// </summary>
         public List<Cookie> Cookies { get; internal set; }
+#endif
 
         /// <summary>
         /// Cached, converted data.
@@ -153,7 +177,9 @@ namespace BestHTTP
 
         protected byte[] fragmentBuffer;
         protected int fragmentBufferDataLength;
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
         protected Stream cacheStream;
+#endif
         protected int allFragmentSize;
 
         #endregion
@@ -163,7 +189,9 @@ namespace BestHTTP
             this.baseRequest = request;
             this.Stream = stream;
             this.IsStreamed = isStreamed;
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
             this.IsFromCache = isFromCache;
+#endif
             this.IsClosedManually = false;
         }
 
@@ -224,7 +252,9 @@ namespace BestHTTP
             // Reading from an already unpacked stream (eq. From a file cache)
             if (forceReadRawContentLength != -1)
             {
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
                 this.IsFromCache = true;
+#endif
                 ReadRaw(Stream, forceReadRawContentLength);
 
                 return true;
@@ -236,9 +266,11 @@ namespace BestHTTP
             if ((StatusCode >= 100 && StatusCode < 200) || StatusCode == 204 || StatusCode == 304 || baseRequest.MethodType == HTTPMethods.Head)
                 return true;
 
+#if (!UNITY_WEBGL || UNITY_EDITOR)
             if (HasHeaderWithValue("transfer-encoding", "chunked"))
                 ReadChunked(Stream);
             else
+#endif
             {
                 //  http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.4
                 //      Case 3 in the above link.
@@ -248,8 +280,13 @@ namespace BestHTTP
                     ReadRaw(Stream, int.Parse(contentLengthHeaders[0]));
                 else if (contentRangeHeaders != null)
                 {
-                    HTTPRange range = GetRange();
-                    ReadRaw(Stream, (range.LastBytePos - range.FirstBytePos) + 1);
+                    if (contentLengthHeaders != null)
+                        ReadRaw(Stream, int.Parse(contentLengthHeaders[0]));
+                    else
+                    {
+                        HTTPRange range = GetRange();
+                        ReadRaw(Stream, (range.LastBytePos - range.FirstBytePos) + 1);
+                    }
                 }
                 else
                     ReadUnknownSize(Stream);
@@ -468,7 +505,11 @@ namespace BestHTTP
 
                 // Progress report:
                 baseRequest.DownloadLength = chunkLength;
-                baseRequest.DownloadProgressChanged = this.IsSuccess || this.IsFromCache;
+                baseRequest.DownloadProgressChanged = this.IsSuccess 
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
+                    || this.IsFromCache
+#endif
+                    ;
 
                 while (chunkLength != 0)
                 {
@@ -485,10 +526,20 @@ namespace BestHTTP
                     do
                     {
                         int bytes = stream.Read(buffer, readBytes, chunkLength - readBytes);
-                        if (bytes == 0)
-                            throw new Exception("The remote server closed the connection unexpectedly!");
+                        if (bytes <= 0)
+                            throw ExceptionHelper.ServerClosedTCPStream();
 
                         readBytes += bytes;
+
+                        // Progress report:
+                        // Placing reporting inside this cycle will report progress much more frequent
+                        baseRequest.Downloaded += bytes;
+                        baseRequest.DownloadProgressChanged = this.IsSuccess
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
+                        || this.IsFromCache
+#endif
+                        ;
+
                     } while (readBytes < chunkLength);
 
                     if (baseRequest.UseStreaming)
@@ -504,10 +555,12 @@ namespace BestHTTP
                     // read the next chunk's length
                     chunkLength = ReadChunkLength(stream);
 
-                    // Progress report:
                     baseRequest.DownloadLength += chunkLength;
-                    baseRequest.Downloaded = contentLength;
-                    baseRequest.DownloadProgressChanged = this.IsSuccess || this.IsFromCache;
+                    baseRequest.DownloadProgressChanged = this.IsSuccess
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
+                        || this.IsFromCache
+#endif
+                        ;
                 }
 
                 if (baseRequest.UseStreaming)
@@ -538,7 +591,11 @@ namespace BestHTTP
 
             // Progress report:
             baseRequest.DownloadLength = contentLength;
-            baseRequest.DownloadProgressChanged = this.IsSuccess || this.IsFromCache;
+            baseRequest.DownloadProgressChanged = this.IsSuccess
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
+                || this.IsFromCache
+#endif
+                ;
 
             using (var output = new MemoryStream(baseRequest.UseStreaming ? 0 : contentLength))
             {
@@ -556,15 +613,19 @@ namespace BestHTTP
                     {
                         int bytes = stream.Read(buffer, readBytes, Math.Min(contentLength, buffer.Length - readBytes));
 
-                        if (bytes == 0)
-                            throw new Exception("The remote server closed the connection unexpectedly!");
+                        if (bytes <= 0)
+                            throw ExceptionHelper.ServerClosedTCPStream();
 
                         readBytes += bytes;
                         contentLength -= bytes;
 
                         // Progress report:
                         baseRequest.Downloaded += bytes;
-                        baseRequest.DownloadProgressChanged = this.IsSuccess || this.IsFromCache;
+                        baseRequest.DownloadProgressChanged = this.IsSuccess
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
+                            || this.IsFromCache
+#endif
+                            ;
 
                     } while (readBytes < buffer.Length && contentLength > 0);
 
@@ -588,7 +649,7 @@ namespace BestHTTP
 
         protected void ReadUnknownSize(Stream stream)
         {
-#if (!UNITY_WP8 && !UNITY_WINRT && !UNITY_METRO) || UNITY_EDITOR
+#if (!NETFX_CORE && !UNITY_WP8) || UNITY_EDITOR
             NetworkStream networkStream = stream as NetworkStream;
 #endif
 
@@ -605,7 +666,7 @@ namespace BestHTTP
                     {
                         bytes = 0;
 
-#if (!UNITY_WP8 && !UNITY_WINRT && !UNITY_METRO) || UNITY_EDITOR
+#if (!NETFX_CORE && !UNITY_WP8) || UNITY_EDITOR
                         // If we have the good-old NetworkStream, than we can use the DataAvailable property. On WP8 platforms, these are omitted... :/
                         if (networkStream != null)
                         {
@@ -632,7 +693,11 @@ namespace BestHTTP
                         // Progress report:
                         baseRequest.Downloaded += bytes;
                         baseRequest.DownloadLength = baseRequest.Downloaded;
-                        baseRequest.DownloadProgressChanged = this.IsSuccess || this.IsFromCache;
+                        baseRequest.DownloadProgressChanged = this.IsSuccess
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
+                            || this.IsFromCache
+#endif
+                            ;
 
                     } while (readBytes < buffer.Length && bytes > 0);
 
@@ -660,7 +725,11 @@ namespace BestHTTP
             streamToDecode.Seek(0, SeekOrigin.Begin);
 
             // The cache stores the decoded data
-            var encoding = IsFromCache ? null : GetHeaderValues("content-encoding");
+            var encoding = 
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
+                IsFromCache ? null : 
+#endif
+                GetHeaderValues("content-encoding");
 
             Stream decoderStream = null;
             if (encoding == null)
@@ -669,8 +738,10 @@ namespace BestHTTP
             {
                 switch (encoding[0])
                 {
+#if !UNITY_WEBGL || UNITY_EDITOR
                     case "gzip": decoderStream = new Decompression.Zlib.GZipStream(streamToDecode, Decompression.Zlib.CompressionMode.Decompress); break;
                     case "deflate": decoderStream = new Decompression.Zlib.DeflateStream(streamToDecode, Decompression.Zlib.CompressionMode.Decompress); break;
+#endif
                     default:
                         //identity, utf-8, etc.
                         decoderStream = streamToDecode;
@@ -696,12 +767,14 @@ namespace BestHTTP
 
         protected void BeginReceiveStreamFragments()
         {
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
             if (!baseRequest.DisableCache && baseRequest.UseStreaming)
             {
                 // If caching is enabled and the response not from cache and it's cacheble the we will cache the downloaded data.
                 if (!IsFromCache && HTTPCacheService.IsCacheble(baseRequest.CurrentUri, baseRequest.MethodType, this))
                     cacheStream = HTTPCacheService.PrepareStreamed(baseRequest.CurrentUri, this);
             }
+#endif
             allFragmentSize = 0;
         }
 
@@ -751,6 +824,7 @@ namespace BestHTTP
                 fragmentBufferDataLength = 0;
             }
 
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
             if (cacheStream != null)
             {
                 cacheStream.Dispose();
@@ -758,6 +832,7 @@ namespace BestHTTP
 
                 HTTPCacheService.SetBodyLength(baseRequest.CurrentUri, allFragmentSize);
             }
+#endif
         }
 
         protected void AddStreamedFragment(byte[] buffer)
@@ -768,11 +843,13 @@ namespace BestHTTP
                     streamedFragments = new List<byte[]>();
                 streamedFragments.Add(buffer);
 
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
                 if (cacheStream != null)
                 {
                     cacheStream.Write(buffer, 0, buffer.Length);
                     allFragmentSize += buffer.Length;
                 }
+#endif
             }
         }
 
@@ -823,11 +900,13 @@ namespace BestHTTP
         /// </summary>
         public void Dispose()
         {
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
             if (cacheStream != null)
             {
                 cacheStream.Dispose();
                 cacheStream = null;
             }
+#endif
         }
     }
 }

@@ -1,29 +1,39 @@
-﻿using System;
+/*
+http://www.cgsoso.com/forum-211-1.html
+
+CG搜搜 Unity3d 每日Unity3d插件免费更新 更有VIP资源！
+
+CGSOSO 主打游戏开发，影视设计等CG资源素材。
+
+插件如若商用，请务必官网购买！
+
+daily assets update for try.
+
+U should buy the asset from home store if u use it in your project!
+*/
+
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 
 #if NETFX_CORE
-using Windows.Security.Cryptography;
-using FileStream = BestHTTP.PlatformSupport.IO.FileStream;
-using BestHTTP.PlatformSupport.IO;
+	using Windows.Security.Cryptography;
+	using Windows.Security.Cryptography.Core;
+	using Windows.Storage.Streams;
+	using BestHTTP.PlatformSupport.IO;
+
+	using FileStream = BestHTTP.PlatformSupport.IO.FileStream;
+#elif UNITY_WP8
+    using Cryptography = BestHTTP.PlatformSupport.Cryptography;
 #else
-using FileStream = System.IO.FileStream;
+	using Cryptography = System.Security.Cryptography;
+	using FileStream = System.IO.FileStream;
 #endif
 
 namespace BestHTTP.Extensions
 {
-#if NETFX_CORE
-    using Windows.Security.Cryptography;
-    using Windows.Security.Cryptography.Core;
-    using Windows.Storage.Streams;
-#elif UNITY_WP8
-    using Cryptography = BestHTTP.PlatformSupport.Cryptography;
-#else
-    using Cryptography = System.Security.Cryptography;
-#endif
-
     public static class Extensions
     {
         #region ASCII Encoding (These are required becouse Windows Phone doesn't supports the Encoding.ASCII class.)
@@ -86,10 +96,6 @@ namespace BestHTTP.Extensions
             fs.Write(buff, 0, buff.Length);
             fs.WriteLine();
         }
-
-        #endregion
-
-        #region Url Shortening
 
         #endregion
 
@@ -221,7 +227,7 @@ namespace BestHTTP.Extensions
             return result;
         }
 
-        internal static string ReadQuotedText(this string str, ref int pos)
+        internal static string ReadPossibleQuotedText(this string str, ref int pos)
         {
             string result = string.Empty;
             if (str == null)
@@ -241,7 +247,7 @@ namespace BestHTTP.Extensions
             }
             else
                 // It's not a quoted text, so we will read until the next option
-                result = str.Read(ref pos, ',');
+                result = str.Read(ref pos, (ch) => ch != ',' && ch != ';');
 
             return result;
         }
@@ -273,14 +279,22 @@ namespace BestHTTP.Extensions
             return new string(buffer, 0, length);
         }
 
+        internal static char? Peek(this string str, int pos)
+        {
+            if (pos < 0 || pos >= str.Length)
+                return null;
+
+            return str[pos];
+        }
+
         #endregion
 
         #region Specialized String Parsers
 
         //public, max-age=2592000
-        internal static List<KeyValuePair> ParseOptionalHeader(this string str)
+        internal static List<HeaderValue> ParseOptionalHeader(this string str)
         {
-            List<KeyValuePair> result = new List<KeyValuePair>();
+            List<HeaderValue> result = new List<HeaderValue>();
 
             if (str == null)
                 return result;
@@ -292,10 +306,10 @@ namespace BestHTTP.Extensions
             {
                 // Read key
                 string key = str.Read(ref idx, (ch) => ch != '=' && ch != ',').TrimAndLower();
-                KeyValuePair qp = new KeyValuePair(key);
+                HeaderValue qp = new HeaderValue(key);
 
                 if (str[idx - 1] == '=')
-                    qp.Value = str.ReadQuotedText(ref idx);
+                    qp.Value = str.ReadPossibleQuotedText(ref idx);
 
                 result.Add(qp);
             }
@@ -304,9 +318,9 @@ namespace BestHTTP.Extensions
         }
 
         //deflate, gzip, x-gzip, identity, *;q=0
-        internal static List<KeyValuePair> ParseQualityParams(this string str)
+        internal static List<HeaderValue> ParseQualityParams(this string str)
         {
-            List<KeyValuePair> result = new List<KeyValuePair>();
+            List<HeaderValue> result = new List<HeaderValue>();
 
             if (str == null)
                 return result;
@@ -316,7 +330,7 @@ namespace BestHTTP.Extensions
             {
                 string key = str.Read(ref idx, (ch) => ch != ',' && ch != ';').TrimAndLower();
 
-                KeyValuePair qp = new KeyValuePair(key);
+                HeaderValue qp = new HeaderValue(key);
 
                 if (str[idx - 1] == ';')
                 {
@@ -332,8 +346,10 @@ namespace BestHTTP.Extensions
 
         #endregion
 
+        #region Buffer Filling
+
         /// <summary>
-        /// Will fill the entire buffer from the stream.
+        /// Will fill the entire buffer from the stream. Will throw an exception when the underlying stream is closed.
         /// </summary>
         public static void ReadBuffer(this Stream stream, byte[] buffer)
         {
@@ -341,9 +357,16 @@ namespace BestHTTP.Extensions
 
             do
             {
-                count += stream.Read(buffer, count, buffer.Length - count);
+                int read = stream.Read(buffer, count, buffer.Length - count);
+
+                if (read <= 0)
+                    throw ExceptionHelper.ServerClosedTCPStream();
+
+                count += read;
             } while (count < buffer.Length);
         }
+
+        #endregion
 
         #region MemoryStream
 
@@ -370,5 +393,13 @@ namespace BestHTTP.Extensions
         }
 
         #endregion
+    }
+
+    public static class ExceptionHelper
+    {
+        public static Exception ServerClosedTCPStream()
+        {
+            return new Exception("TCP Stream closed unexpectedly by the remote server");
+        }
     }
 }

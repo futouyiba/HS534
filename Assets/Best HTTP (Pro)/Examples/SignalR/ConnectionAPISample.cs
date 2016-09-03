@@ -1,13 +1,32 @@
-﻿using System;
-using System.Collections.Generic;
+/*
+http://www.cgsoso.com/forum-211-1.html
+
+CG搜搜 Unity3d 每日Unity3d插件免费更新 更有VIP资源！
+
+CGSOSO 主打游戏开发，影视设计等CG资源素材。
+
+插件如若商用，请务必官网购买！
+
+daily assets update for try.
+
+U should buy the asset from home store if u use it in your project!
+*/
+
+#if !BESTHTTP_DISABLE_SIGNALR
+
+using System;
 
 using UnityEngine;
 using BestHTTP.SignalR;
-using BestHTTP.Cookies;
+using BestHTTP.Examples;
+
+#if !BESTHTTP_DISABLE_COOKIES && (!UNITY_WEBGL || UNITY_EDITOR)
+    using BestHTTP.Cookies;
+#endif
 
 public sealed class ConnectionAPISample : MonoBehaviour
 {
-    readonly Uri URI = new Uri("http://besthttpsignalr.azurewebsites.net/raw-connection/");
+    readonly Uri URI = new Uri("https://besthttpsignalr.azurewebsites.net/raw-connection/");
 
     /// <summary>
     /// Possible message types that the client can send to the server
@@ -45,10 +64,12 @@ public sealed class ConnectionAPISample : MonoBehaviour
 
     void Start()
     {
+#if !BESTHTTP_DISABLE_COOKIES && (!UNITY_WEBGL || UNITY_EDITOR)
         // Set a "user" cookie if we previously used the 'Enter Name' button.
         // The server will set this username to the new connection.
         if (PlayerPrefs.HasKey("userName"))
             CookieJar.Set(URI, new Cookie("user", PlayerPrefs.GetString("userName")));
+#endif
 
         signalRConnection = new Connection(URI);
 
@@ -78,7 +99,7 @@ public sealed class ConnectionAPISample : MonoBehaviour
                 GUILayout.Label("To Everybody");
 
                 GUILayout.BeginHorizontal();
-            
+
                     ToEveryBodyText = GUILayout.TextField(ToEveryBodyText, GUILayout.MinWidth(100));
 
                     if (GUILayout.Button("Broadcast"))
@@ -173,7 +194,7 @@ public sealed class ConnectionAPISample : MonoBehaviour
     {
         // For now, just create a Json string from the sent data again
         string reencoded = BestHTTP.JSON.Json.Encode(data);
-        
+
         // and display it
         messages.Add("[Server Message] " + reencoded);
     }
@@ -262,3 +283,5 @@ public sealed class ConnectionAPISample : MonoBehaviour
 
     #endregion
 }
+
+#endif

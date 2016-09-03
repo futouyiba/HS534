@@ -1,4 +1,19 @@
-﻿using System;
+/*
+http://www.cgsoso.com/forum-211-1.html
+
+CG搜搜 Unity3d 每日Unity3d插件免费更新 更有VIP资源！
+
+CGSOSO 主打游戏开发，影视设计等CG资源素材。
+
+插件如若商用，请务必官网购买！
+
+daily assets update for try.
+
+U should buy the asset from home store if u use it in your project!
+*/
+
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -6,19 +21,69 @@ using System.Text;
 namespace BestHTTP
 {
     using BestHTTP.Authentication;
-    using BestHTTP.Cookies;
     using BestHTTP.Extensions;
     using BestHTTP.Forms;
+
+    #if !BESTHTTP_DISABLE_COOKIES && (!UNITY_WEBGL || UNITY_EDITOR)
+        using BestHTTP.Cookies;
+    #endif
+
+    /// <summary>
+    /// Possible logical states of a HTTTPRequest object.
+    /// </summary>
+    public enum HTTPRequestStates
+    {
+        /// <summary>
+        /// Initial status of a request. No callback will be called with this status.
+        /// </summary>
+        Initial,
+
+        /// <summary>
+        /// Waiting in a queue to be processed. No callback will be called with this status.
+        /// </summary>
+        Queued,
+
+        /// <summary>
+        /// Processing of the request started. In this state the client will send the request, and parse the response. No callback will be called with this status.
+        /// </summary>
+        Processing,
+
+        /// <summary>
+        /// The request finished without problem. Parsing the response done, the result can be used. The user defined callback will be called with a valid response object. The request’s Exception property will be null.
+        /// </summary>
+        Finished,
+
+        /// <summary>
+        /// The request finished with an unexpected error. The user defined callback will be called with a null response object. The request's Exception property may contain more info about the error, but it can be null.
+        /// </summary>
+        Error,
+
+        /// <summary>
+        /// The request aborted by the client(HTTPRequest’s Abort() function). The user defined callback will be called with a null response. The request’s Exception property will be null.
+        /// </summary>
+        Aborted,
+
+        /// <summary>
+        /// Connecting to the server timed out. The user defined callback will be called with a null response. The request’s Exception property will be null.
+        /// </summary>
+        ConnectionTimedOut,
+
+        /// <summary>
+        /// The request didn't finished in the given time. The user defined callback will be called with a null response. The request’s Exception property will be null.
+        /// </summary>
+        TimedOut
+    }
 
     public delegate void OnRequestFinishedDelegate(HTTPRequest originalRequest, HTTPResponse response);
     public delegate void OnDownloadProgressDelegate(HTTPRequest originalRequest, int downloaded, int downloadLength);
     public delegate void OnUploadProgressDelegate(HTTPRequest originalRequest, long uploaded, long uploadLength);
     public delegate bool OnBeforeRedirectionDelegate(HTTPRequest originalRequest, HTTPResponse response, Uri redirectUri);
+    public delegate void OnHeaderEnumerationDelegate(string header, List<string> values);
 
     /// <summary>
-    /// 
+    ///
     /// </summary>
-    public sealed class HTTPRequest : System.Collections.IEnumerator, IEnumerator<HTTPRequest>
+    public sealed class HTTPRequest : IEnumerator, IEnumerator<HTTPRequest>
     {
         #region Statics
 
@@ -37,9 +102,9 @@ namespace BestHTTP
                                                         };
 
         /// <summary>
-        /// Size of the internal buffer, and upload progress will be fired when this size of data sent to the wire. It's default value is 1024 bytes.
+        /// Size of the internal buffer, and upload progress will be fired when this size of data sent to the wire. It's default value is 2 KiB.
         /// </summary>
-        public static int UploadChunkSize = 1 * 1024;
+        public static int UploadChunkSize = 2 * 1024;
 
         #endregion
 
@@ -66,7 +131,7 @@ namespace BestHTTP
         public Stream UploadStream { get; set; }
 
         /// <summary>
-        /// When set to true(it's default value) the plugin will call the UploadStream's Dispose() function when finished uploading the data from it. Default value is true.
+        /// When set to true(its default value) the plugin will call the UploadStream's Dispose() function when finished uploading the data from it. Default value is true.
         /// </summary>
         public bool DisposeUploadStream { get; set; }
 
@@ -95,6 +160,7 @@ namespace BestHTTP
             }
         }
 
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
         /// <summary>
         /// With this property caching can be enabled/disabled on a per-request basis.
         /// </summary>
@@ -108,6 +174,7 @@ namespace BestHTTP
                 disableCache = value;
             }
         }
+#endif
 
         /// <summary>
         /// If it's true, the Callback will be called every time if we can send out at least one fragment.
@@ -184,10 +251,12 @@ namespace BestHTTP
         /// </summary>
         public HTTPResponse Response { get; internal set; }
 
+#if !BESTHTTP_DISABLE_PROXY
         /// <summary>
         /// Reponse from the Proxy server. It's null with transparent proxies.
         /// </summary>
         public HTTPResponse ProxyResponse { get; internal set; }
+#endif
 
         /// <summary>
         /// It there is an exception while processing the request or response the Response property will be null, and the Exception will be stored in this property.
@@ -204,6 +273,7 @@ namespace BestHTTP
         /// </summary>
         public Credentials Credentials { get; set; }
 
+#if !BESTHTTP_DISABLE_PROXY
         /// <summary>
         /// True, if there is a Proxy object.
         /// </summary>
@@ -213,16 +283,21 @@ namespace BestHTTP
         /// A web proxy's properties where the request must pass through.
         /// </summary>
         public HTTPProxy Proxy { get; set; }
+#endif
 
         /// <summary>
         /// How many redirection supported for this request. The default is int.MaxValue. 0 or a negative value means no redirection supported.
         /// </summary>
         public int MaxRedirects { get; set; }
 
+#if !BESTHTTP_DISABLE_ALTERNATE_SSL && (!UNITY_WEBGL || UNITY_EDITOR)
         /// <summary>
         /// Use Bouncy Castle's code to handle the secure protocol instead of Mono's. You can try to set it true if you receive a "System.Security.Cryptography.CryptographicException: Unsupported hash algorithm" exception.
         /// </summary>
         public bool UseAlternateSSL { get; set; }
+#endif
+
+#if !BESTHTTP_DISABLE_COOKIES && (!UNITY_WEBGL || UNITY_EDITOR)
 
         /// <summary>
         /// If true cookies will be added to the headers (if any), and parsed from the response. If false, all cookie operations will be ignored. It's default value is HTTPManager's IsCookiesEnabled.
@@ -244,6 +319,7 @@ namespace BestHTTP
         }
 
         private List<Cookie> customCookies;
+#endif
 
         /// <summary>
         /// What form should used. Default to Automatic.
@@ -260,7 +336,7 @@ namespace BestHTTP
         /// </summary>
         public int RedirectCount { get; internal set; }
 
-#if !UNITY_WP8 && !NETFX_CORE
+#if !NETFX_CORE && !UNITY_WP8
         /// <summary>
         /// Custom validator for an SslStream. This event will receive the original HTTPRequest, an X509Certificate and an X509Chain objects. It must return true if the certificate valid, false otherwise.
         /// <remarks>It's called in a thread! Not available on Windows Phone!</remarks>
@@ -289,13 +365,20 @@ namespace BestHTTP
         /// </summary>
         public int Priority { get; set; }
 
+#if !BESTHTTP_DISABLE_ALTERNATE_SSL && (!UNITY_WEBGL || UNITY_EDITOR)
         /// <summary>
         /// The ICertificateVerifyer implementation that the plugin will use to verify the server certificates when the request's UseAlternateSSL property is set to true.
         /// </summary>
         public Org.BouncyCastle.Crypto.Tls.ICertificateVerifyer CustomCertificateVerifyer { get; set; }
 
         /// <summary>
-        /// 
+        /// The IClientCredentialsProvider implementation that the plugin will use to send client certificates when the request's UseAlternateSSL property is set to true.
+        /// </summary>
+        public Org.BouncyCastle.Crypto.Tls.IClientCredentialsProvider CustomClientCredentialsProvider { get; set; }
+#endif
+
+        /// <summary>
+        ///
         /// </summary>
         public SupportedProtocols ProtocolHandler { get; set; }
 
@@ -355,12 +438,12 @@ namespace BestHTTP
         /// <summary>
         /// How many bytes are sent to the wire
         /// </summary>
-        internal long Uploaded { get; private set; }
+        internal long Uploaded { get; set; }
 
         /// <summary>
         /// How many bytes are expected we are sending. If we are don't know, then it will be -1.
         /// </summary>
-        internal long UploadLength { get; private set; }
+        internal long UploadLength { get; set; }
 
         /// <summary>
         /// Set to true when the uploaded bytes are changed, and set to false when the OnUploadProgress event called.
@@ -374,7 +457,9 @@ namespace BestHTTP
         #region Privates
 
         private bool isKeepAlive;
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
         private bool disableCache;
+#endif
         private int streamFragmentSize;
         private bool useStreaming;
 
@@ -398,17 +483,36 @@ namespace BestHTTP
         #region Default Get Constructors
 
         public HTTPRequest(Uri uri)
-            : this(uri, HTTPMethods.Get, HTTPManager.KeepAliveDefaultValue, HTTPManager.IsCachingDisabled, null)
+            : this(uri, HTTPMethods.Get, HTTPManager.KeepAliveDefaultValue,
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
+            HTTPManager.IsCachingDisabled
+#else
+            true
+#endif
+            , null)
         {
         }
 
         public HTTPRequest(Uri uri, OnRequestFinishedDelegate callback)
-            : this(uri, HTTPMethods.Get, HTTPManager.KeepAliveDefaultValue, HTTPManager.IsCachingDisabled, callback)
+            : this(uri, HTTPMethods.Get, HTTPManager.KeepAliveDefaultValue,
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
+            HTTPManager.IsCachingDisabled
+#else
+            true
+#endif
+            , callback)
         {
         }
 
         public HTTPRequest(Uri uri, bool isKeepAlive, OnRequestFinishedDelegate callback)
-            : this(uri, HTTPMethods.Get, isKeepAlive, HTTPManager.IsCachingDisabled, callback)
+            : this(uri, HTTPMethods.Get, isKeepAlive,
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
+            HTTPManager.IsCachingDisabled
+#else
+            true
+#endif
+
+            , callback)
         {
         }
         public HTTPRequest(Uri uri, bool isKeepAlive, bool disableCache, OnRequestFinishedDelegate callback)
@@ -419,17 +523,35 @@ namespace BestHTTP
         #endregion
 
         public HTTPRequest(Uri uri, HTTPMethods methodType)
-            : this(uri, methodType, HTTPManager.KeepAliveDefaultValue, HTTPManager.IsCachingDisabled || methodType != HTTPMethods.Get, null)
+            : this(uri, methodType, HTTPManager.KeepAliveDefaultValue,
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
+            HTTPManager.IsCachingDisabled || methodType != HTTPMethods.Get
+#else
+            true
+#endif
+            , null)
         {
         }
 
         public HTTPRequest(Uri uri, HTTPMethods methodType, OnRequestFinishedDelegate callback)
-            : this(uri, methodType, HTTPManager.KeepAliveDefaultValue, HTTPManager.IsCachingDisabled || methodType != HTTPMethods.Get, callback)
+            : this(uri, methodType, HTTPManager.KeepAliveDefaultValue,
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
+            HTTPManager.IsCachingDisabled || methodType != HTTPMethods.Get
+#else
+            true
+#endif
+            , callback)
         {
         }
 
         public HTTPRequest(Uri uri, HTTPMethods methodType, bool isKeepAlive, OnRequestFinishedDelegate callback)
-            : this(uri, methodType, isKeepAlive, HTTPManager.IsCachingDisabled || methodType != HTTPMethods.Get, callback)
+            : this(uri, methodType, isKeepAlive,
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
+            HTTPManager.IsCachingDisabled || methodType != HTTPMethods.Get
+#else
+            true
+#endif
+            , callback)
         {
         }
 
@@ -438,14 +560,18 @@ namespace BestHTTP
             this.Uri = uri;
             this.MethodType = methodType;
             this.IsKeepAlive = isKeepAlive;
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
             this.DisableCache = disableCache;
+#endif
             this.Callback = callback;
             this.StreamFragmentSize = 4 * 1024;
 
             this.DisableRetry = methodType == HTTPMethods.Post;
             this.MaxRedirects = int.MaxValue;
             this.RedirectCount = 0;
+#if !BESTHTTP_DISABLE_COOKIES && (!UNITY_WEBGL || UNITY_EDITOR)
             this.IsCookiesEnabled = HTTPManager.IsCookiesEnabled;
+#endif
 
             this.Downloaded = DownloadLength = 0;
             this.DownloadProgressChanged = false;
@@ -456,13 +582,18 @@ namespace BestHTTP
             this.Timeout = HTTPManager.RequestTimeout;
             this.EnableTimoutForStreaming = false;
 
+#if !BESTHTTP_DISABLE_PROXY
             this.Proxy = HTTPManager.Proxy;
+#endif
 
             this.UseUploadStreamLength = true;
             this.DisposeUploadStream = true;
 
+#if !BESTHTTP_DISABLE_ALTERNATE_SSL && (!UNITY_WEBGL || UNITY_EDITOR)
             this.CustomCertificateVerifyer = HTTPManager.DefaultCertificateVerifyer;
+            this.CustomClientCredentialsProvider = HTTPManager.DefaultClientCredentialsProvider;
             this.UseAlternateSSL = HTTPManager.UseAlternateSSLDefaultValue;
+#endif
         }
 
         #endregion
@@ -520,7 +651,7 @@ namespace BestHTTP
         /// </summary>
         public void SetFields(UnityEngine.WWWForm wwwForm)
         {
-#if !UNITY_WP8
+#if !BESTHTTP_DISABLE_UNITY_FORM
             FormUsage = HTTPFormUsage.Unity;
             FormImpl = new UnityForm(wwwForm);
 #endif
@@ -568,7 +699,7 @@ namespace BestHTTP
 
                 case HTTPFormUsage.UrlEncoded:  FormImpl = new HTTPUrlEncodedForm(); break;
                 case HTTPFormUsage.Multipart:   FormImpl = new HTTPMultiPartForm(); break;
-#if !UNITY_WP8
+#if !BESTHTTP_DISABLE_UNITY_FORM
                 case HTTPFormUsage.Unity:       FormImpl = new UnityForm(); break;
 #endif
             }
@@ -701,11 +832,9 @@ namespace BestHTTP
 
         #endregion
 
-        /// <summary>
-        /// Writes out the Headers to the stream.
-        /// </summary>
-        private void SendHeaders(BinaryWriter stream)
+        public void EnumerateHeaders(OnHeaderEnumerationDelegate callback)
         {
+#if !UNITY_WEBGL || UNITY_EDITOR
             if (!HasHeader("Host"))
                 SetHeader("Host", CurrentUri.Authority);
 
@@ -715,9 +844,11 @@ namespace BestHTTP
             if (!HasHeader("Accept-Encoding"))
                 AddHeader("Accept-Encoding", "gzip, identity");
 
+            #if !BESTHTTP_DISABLE_PROXY
             if (HasProxy && !HasHeader("Proxy-Connection"))
                 AddHeader("Proxy-Connection", IsKeepAlive ? "Keep-Alive" : "Close");
-            
+            #endif
+
             if (!HasHeader("Connection"))
                 AddHeader("Connection", IsKeepAlive ? "Keep-Alive, TE" : "Close, TE");
 
@@ -726,8 +857,9 @@ namespace BestHTTP
 
             if (!HasHeader("User-Agent"))
                 AddHeader("User-Agent", "BestHTTP");
-
+#endif
             long contentLength = -1;
+
             if (UploadStream == null)
             {
                 byte[] entityBody = GetEntityBody();
@@ -743,7 +875,7 @@ namespace BestHTTP
             else
             {
                 contentLength = UploadStreamLength;
-                
+
                 if (contentLength == -1)
                     SetHeader("Transfer-Encoding", "Chunked");
 
@@ -756,6 +888,8 @@ namespace BestHTTP
             if (contentLength != -1 && !HasHeader("Content-Length"))
                 SetHeader("Content-Length", contentLength.ToString());
 
+#if !UNITY_WEBGL || UNITY_EDITOR
+            #if !BESTHTTP_DISABLE_PROXY
             // Proxy Authentication
             if (HasProxy && Proxy.Credentials != null)
             {
@@ -779,6 +913,9 @@ namespace BestHTTP
                         break;
                 }
             }
+#endif
+
+#endif
 
             // Server authentication
             if (Credentials != null)
@@ -805,6 +942,7 @@ namespace BestHTTP
             }
 
             // Cookies.
+#if !BESTHTTP_DISABLE_COOKIES && (!UNITY_WEBGL || UNITY_EDITOR)
             // User added cookies are sent even when IsCookiesEnabled is set to false
             List<Cookie> cookies = IsCookiesEnabled ? CookieJar.Get(CurrentUri) : null;
 
@@ -842,11 +980,9 @@ namespace BestHTTP
                 string cookieStr = string.Empty;
 
                 bool isSecureProtocolInUse = HTTPProtocolFactory.IsSecureProtocol(CurrentUri);
-                SupportedProtocols protocolInUse = HTTPProtocolFactory.GetProtocolFromUri(CurrentUri);
 
                 foreach (var cookie in cookies)
-                    if ((!cookie.IsSecure || (cookie.IsSecure && isSecureProtocolInUse)) &&
-                        (!cookie.IsHttpOnly || (cookie.IsHttpOnly && protocolInUse == SupportedProtocols.HTTP)))
+                    if (!cookie.IsSecure || (cookie.IsSecure && isSecureProtocolInUse))
                     {
                         if (!first)
                             cookieStr += "; ";
@@ -859,21 +995,42 @@ namespace BestHTTP
                         cookie.LastAccess = DateTime.UtcNow;
                     }
 
-                SetHeader("Cookie", cookieStr);
+                if (!string.IsNullOrEmpty(cookieStr))
+                    SetHeader("Cookie", cookieStr);
             }
+#endif
 
             // Write out the headers to the stream
-            foreach (var kvp in Headers)
-            {
-                byte[] headerName = string.Concat(kvp.Key, ": ").GetASCIIBytes();
+            if (callback != null)
+                foreach (var kvp in Headers)
+                    callback(kvp.Key, kvp.Value);
+        }
 
-                for (int i = 0; i < kvp.Value.Count; ++i)
+        /// <summary>
+        /// Writes out the Headers to the stream.
+        /// </summary>
+        private void SendHeaders(BinaryWriter stream)
+        {
+            EnumerateHeaders((header, values) =>
                 {
-                    stream.Write(headerName);
-                    stream.Write(kvp.Value[i].GetASCIIBytes());
-                    stream.Write(EOL);
-                }
-            }
+                    if (string.IsNullOrEmpty(header) || values == null)
+                        return;
+
+                    byte[] headerName = string.Concat(header, ": ").GetASCIIBytes();
+
+                    for (int i = 0; i < values.Count; ++i)
+                    {
+                        if (string.IsNullOrEmpty(values[i]))
+                        {
+                            HTTPManager.Logger.Warning("HTTPRequest", string.Format("Null/empty value for header: {0}", header));
+                            continue;
+                        }
+
+                        stream.Write(headerName);
+                        stream.Write(values[i].GetASCIIBytes());
+                        stream.Write(EOL);
+                    }
+                });
         }
 
         /// <summary>
@@ -914,7 +1071,12 @@ namespace BestHTTP
             {
                 BinaryWriter outStream = new BinaryWriter(stream);
 
-                string requestLine = string.Format("{0} {1} HTTP/1.1", MethodNames[(byte)MethodType], HasProxy && Proxy.SendWholeUri ? CurrentUri.OriginalString : CurrentUri.PathAndQuery);
+#if !UNITY_WEBGL || UNITY_EDITOR
+                string requestLine = string.Format("{0} {1} HTTP/1.1", MethodNames[(byte)MethodType],
+                #if !BESTHTTP_DISABLE_PROXY
+                    HasProxy && Proxy.SendWholeUri ? CurrentUri.OriginalString :
+                #endif
+                    CurrentUri.PathAndQuery);
 
                 if (HTTPManager.Logger.Level <= Logger.Loglevels.Information)
                     HTTPManager.Logger.Information("HTTPRequest", string.Format("Sending request: {0}", requestLine));
@@ -926,7 +1088,9 @@ namespace BestHTTP
                 outStream.Write(EOL);
 
                 // Send headers to the wire
-                outStream.Flush();
+                if (UploadStream != null)
+                    outStream.Flush();
+#endif
 
                 byte[] data = RawData;
 
@@ -1060,13 +1224,13 @@ namespace BestHTTP
         /// </summary>
         internal void Prepare()
         {
-#if !UNITY_WP8
+#if !BESTHTTP_DISABLE_UNITY_FORM
             if (FormUsage == HTTPFormUsage.Unity)
                 SelectFormImplementation();
 #endif
         }
 
-#if !UNITY_WP8 && !NETFX_CORE
+#if !NETFX_CORE && !UNITY_WP8
         internal bool CallCustomCertificationValidator(System.Security.Cryptography.X509Certificates.X509Certificate cert, System.Security.Cryptography.X509Certificates.X509Chain chain)
         {
             if (CustomCertificationValidator != null)
@@ -1108,7 +1272,7 @@ namespace BestHTTP
                     // so try to remove from the request queue
                     if (!HTTPManager.RemoveFromQueue(this))
                         HTTPManager.Logger.Warning("HTTPRequest", "Abort - No active connection found with this request! (The request may already finished?)");
-                    
+
                     this.State = HTTPRequestStates.Aborted;
                 }
                 else
@@ -1134,7 +1298,7 @@ namespace BestHTTP
 
         #region System.Collections.IEnumerator implementation
 
-        public object Current { get { return this; } }
+        public object Current { get { return null; } }
 
         public bool MoveNext()
         {
@@ -1155,7 +1319,7 @@ namespace BestHTTP
 
         public void Dispose()
         {
-            
+
         }
     }
 }

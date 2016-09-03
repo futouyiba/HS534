@@ -1,7 +1,29 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+/*
+http://www.cgsoso.com/forum-211-1.html
+
+CG搜搜 Unity3d 每日Unity3d插件免费更新 更有VIP资源！
+
+CGSOSO 主打游戏开发，影视设计等CG资源素材。
+
+插件如若商用，请务必官网购买！
+
+daily assets update for try.
+
+U should buy the asset from home store if u use it in your project!
+*/
+
+#if !BESTHTTP_DISABLE_SOCKETIO
+
+using System;
 using System.Text;
+
+using PlatformSupport.Collections.ObjectModel;
+
+#if !NETFX_CORE
+    using PlatformSupport.Collections.Specialized;
+#else
+    using System.Collections.Specialized;
+#endif
 
 namespace BestHTTP.SocketIO
 {
@@ -51,7 +73,26 @@ namespace BestHTTP.SocketIO
         /// Additional query parameters that will be passed for the handsake uri. If the value is null, or an empty string it will be not appended to the query only the key.
         /// <remarks>The keys and values must be escaped properly, as the plugin will not escape these. </remarks>
         /// </summary>
-        public Dictionary<string, string> AdditionalQueryParams { get; set; }
+        public ObservableDictionary<string, string> AdditionalQueryParams
+        {
+            get { return additionalQueryParams; }
+            set
+            {
+                // Unsubscribe from previous dictionary's events
+                if (additionalQueryParams != null)
+                    additionalQueryParams.CollectionChanged -= AdditionalQueryParams_CollectionChanged;
+
+                additionalQueryParams = value;
+
+                // Clear out the cached value
+                BuiltQueryParams = null;
+
+                // Subscribe to the collection changed event
+                if (value != null)
+                    value.CollectionChanged += AdditionalQueryParams_CollectionChanged;
+            }
+        }
+        private ObservableDictionary<string, string> additionalQueryParams;
 
         /// <summary>
         /// If it's false, the parmateres in the AdditionalQueryParams will be passed for all http requests. Its default value is true.
@@ -99,7 +140,7 @@ namespace BestHTTP.SocketIO
             {
                 sb.Append("&");
                 sb.Append(kvp.Key);
-                
+
                 if (!string.IsNullOrEmpty(kvp.Value))
                 {
                     sb.Append("=");
@@ -110,6 +151,16 @@ namespace BestHTTP.SocketIO
             return BuiltQueryParams = sb.ToString();
         }
 
+        /// <summary>
+        /// This event will be called when the AdditonalQueryPrams dictionary changed. We have to reset the cached values.
+        /// </summary>
+        private void AdditionalQueryParams_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            BuiltQueryParams = null;
+        }
+
         #endregion
     }
 }
+
+#endif

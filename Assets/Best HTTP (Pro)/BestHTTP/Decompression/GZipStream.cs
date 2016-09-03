@@ -1,3 +1,17 @@
+/*
+http://www.cgsoso.com/forum-211-1.html
+
+CG搜搜 Unity3d 每日Unity3d插件免费更新 更有VIP资源！
+
+CGSOSO 主打游戏开发，影视设计等CG资源素材。
+
+插件如若商用，请务必官网购买！
+
+daily assets update for try.
+
+U should buy the asset from home store if u use it in your project!
+*/
+
 // GZipStream.cs
 // ------------------------------------------------------------------
 //
@@ -71,16 +85,9 @@ namespace BestHTTP.Decompression.Zlib
     ///   representing a single file.
     /// </para>
     ///
-    /// <para>
-    ///   This class is similar to <see cref="ZlibStream"/> and <see cref="DeflateStream"/>.
-    ///   <c>ZlibStream</c> handles RFC1950-compliant streams.  <see cref="DeflateStream"/>
-    ///   handles RFC1951-compliant streams. This class handles RFC1952-compliant streams.
-    /// </para>
-    ///
     /// </remarks>
     ///
     /// <seealso cref="DeflateStream" />
-    /// <seealso cref="ZlibStream" />
     internal class GZipStream : System.IO.Stream
     {
         // GZip format

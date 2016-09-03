@@ -1,4 +1,20 @@
-﻿using System;
+/*
+http://www.cgsoso.com/forum-211-1.html
+
+CG搜搜 Unity3d 每日Unity3d插件免费更新 更有VIP资源！
+
+CGSOSO 主打游戏开发，影视设计等CG资源素材。
+
+插件如若商用，请务必官网购买！
+
+daily assets update for try.
+
+U should buy the asset from home store if u use it in your project!
+*/
+
+#if !BESTHTTP_DISABLE_SIGNALR
+
+using System;
 using System.Text;
 using System.Collections.Generic;
 
@@ -8,6 +24,14 @@ using BestHTTP.SignalR.Messages;
 using BestHTTP.SignalR.Transports;
 using BestHTTP.SignalR.JsonEncoders;
 using BestHTTP.SignalR.Authentication;
+
+using PlatformSupport.Collections.ObjectModel;
+
+#if !NETFX_CORE
+    using PlatformSupport.Collections.Specialized;
+#else
+    using System.Collections.Specialized;
+#endif
 
 namespace BestHTTP.SignalR
 {
@@ -23,6 +47,7 @@ namespace BestHTTP.SignalR
     /// </summary>
     public interface IConnection
     {
+        ProtocolVersions Protocol { get; }
         NegotiationData NegotiationResult { get; }
         IJsonEncoder JsonEncoder { get; set; }
 
@@ -35,6 +60,16 @@ namespace BestHTTP.SignalR
         Uri BuildUri(RequestTypes type, TransportBase transport);
         HTTPRequest PrepareRequest(HTTPRequest req, RequestTypes type);
         string ParseResponse(string responseStr);
+    }
+
+    /// <summary>
+    /// Supported versions of the SignalR protocol.
+    /// </summary>
+    public enum ProtocolVersions : byte
+    {
+        Protocol_2_0,
+        Protocol_2_1,
+        Protocol_2_2
     }
 
     /// <summary>
@@ -90,7 +125,26 @@ namespace BestHTTP.SignalR
         /// Additional query parameters that will be passed for the handsake uri. If the value is null, or an empty string it will be not appended to the query only the key.
         /// <remarks>The keys and values must be escaped properly, as the plugin will not escape these. </remarks>
         /// </summary>
-        public Dictionary<string, string> AdditionalQueryParams { get; set; }
+        public ObservableDictionary<string, string> AdditionalQueryParams
+        {
+            get { return additionalQueryParams; }
+            set
+            {
+                // Unsubscribe from previous dictionary's events
+                if (additionalQueryParams != null)
+                    additionalQueryParams.CollectionChanged -= AdditionalQueryParams_CollectionChanged;
+
+                additionalQueryParams = value;
+
+                // Clear out the cached value
+                BuiltQueryParams = null;
+
+                // Subscribe to the collection changed event
+                if (value != null)
+                    value.CollectionChanged += AdditionalQueryParams_CollectionChanged;
+            }
+        }
+        private ObservableDictionary<string, string> additionalQueryParams;
 
         /// <summary>
         /// If it's false, the parmateres in the AdditionalQueryParams will be passed for all http requests. Its default value is true.
@@ -178,6 +232,11 @@ namespace BestHTTP.SignalR
             }
         }
 
+        /// <summary>
+        /// Current client protocol in use.
+        /// </summary>
+        public ProtocolVersions Protocol { get; private set; }
+
         #endregion
 
         #region Internals
@@ -197,9 +256,9 @@ namespace BestHTTP.SignalR
         #region Privates
 
         /// <summary>
-        /// The supported client protocol version.
+        /// Supported client protocol versions.
         /// </summary>
-        private readonly string ClientProtocol = "1.5";
+        private readonly string[] ClientProtocols = new string[] { "1.3", "1.4", "1.5" };
 
         /// <summary>
         /// A timestamp that will be sent with all request for easier debugging.
@@ -235,7 +294,12 @@ namespace BestHTTP.SignalR
         /// <summary>
         /// When we started to reconnect. When too much time passes without a successful reconnect, we will close the connection.
         /// </summary>
-        private DateTime? ReconnectStartedAt;
+        private DateTime ReconnectStartedAt;
+
+        /// <summary>
+        /// True, if the reconnect process started.
+        /// </summary>
+        private bool ReconnectStarted;
 
         /// <summary>
         /// When the last ping request sent out.
@@ -366,6 +430,9 @@ namespace BestHTTP.SignalR
 
             this.JsonEncoder = Connection.DefaultEncoder;
             this.PingInterval = TimeSpan.FromMinutes(5);
+
+            // Expected protocol
+            this.Protocol = ProtocolVersions.Protocol_2_2;
         }
 
         #endregion
@@ -435,18 +502,46 @@ namespace BestHTTP.SignalR
         /// </summary>
         private void OnNegotiationDataReceived(NegotiationData data)
         {
+            // Find out what supported protocol the server speak
+            int protocolIdx = -1;
+            for (int i = 0; i < ClientProtocols.Length && protocolIdx == -1; ++i)
+                if (data.ProtocolVersion == ClientProtocols[i])
+                    protocolIdx = i;
+
+            // No supported protocol found? Try using the latest one.
+            if (protocolIdx == -1)
+            {
+                protocolIdx = (byte)ProtocolVersions.Protocol_2_2;
+                HTTPManager.Logger.Warning("SignalR Connection", "Unknown protocol version: " + data.ProtocolVersion);
+            }
+
+            this.Protocol = (ProtocolVersions)protocolIdx;
+
+#if !BESTHTTP_DISABLE_WEBSOCKET
             if (data.TryWebSockets)
             {
                 Transport = new WebSocketTransport(this);
 
-                NextProtocolToTry = SupportedProtocols.ServerSentEvents;
+                #if !BESTHTTP_DISABLE_SERVERSENT_EVENTS
+                    NextProtocolToTry = SupportedProtocols.ServerSentEvents;
+                #else
+                    NextProtocolToTry = SupportedProtocols.HTTP;
+                #endif
             }
             else
+#endif
             {
-                Transport = new ServerSentEventsTransport(this);
+                #if !BESTHTTP_DISABLE_SERVERSENT_EVENTS
+                    Transport = new ServerSentEventsTransport(this);
 
-                // Long-Poll
-                NextProtocolToTry = SupportedProtocols.HTTP;
+                    // Long-Poll
+                    NextProtocolToTry = SupportedProtocols.HTTP;
+                #else
+
+                    Transport = new PollingTransport(this);
+
+                    NextProtocolToTry = SupportedProtocols.Unknown;
+                #endif
             }
 
             this.State = ConnectionStates.Connecting;
@@ -467,6 +562,8 @@ namespace BestHTTP.SignalR
 
         #endregion
 
+        #region Public Interface
+
         /// <summary>
         /// Closes the connection and shuts down the transport.
         /// </summary>
@@ -477,7 +574,9 @@ namespace BestHTTP.SignalR
 
             this.State = ConnectionStates.Closed;
 
-            ReconnectStartedAt = null;
+            //ReconnectStartedAt = null;
+            ReconnectStarted = false;
+
             TransportConnectionStartedAt = null;
 
             if (Transport != null)
@@ -520,14 +619,19 @@ namespace BestHTTP.SignalR
         /// </summary>
         public void Reconnect()
         {
-            if (ReconnectStartedAt != null)
+            // Return if reconnect process already started.
+            if (ReconnectStarted)
                 return;
+            ReconnectStarted = true;
 
-            HTTPManager.Logger.Warning("SignalR Connection", "Reconnecting");
+            // Set ReconnectStartedAt only when the previous State is not Reconnecting,
+            // so we keep the first date&time when we started reconnecting
+            if (this.State != ConnectionStates.Reconnecting)
+                ReconnectStartedAt = DateTime.UtcNow;
 
             this.State = ConnectionStates.Reconnecting;
 
-            ReconnectStartedAt = DateTime.UtcNow;
+            HTTPManager.Logger.Warning("SignalR Connection", "Reconnecting");
 
             Transport.Reconnect();
 
@@ -547,10 +651,12 @@ namespace BestHTTP.SignalR
             }
         }
 
+
         /// <summary>
         /// Will encode the argument to a Json string using the Connection's JsonEncoder, then will send it to the server.
         /// </summary>
-        public void Send(object arg)
+        /// <returns>True if the plugin was able to send out the message</returns>
+        public bool Send(object arg)
         {
             if (arg == null)
                 throw new ArgumentNullException("arg");
@@ -558,18 +664,24 @@ namespace BestHTTP.SignalR
             lock(SyncRoot)
             {
                 if (this.State != ConnectionStates.Connected)
-                    return;
+                    return false;
 
                 string json = JsonEncoder.Encode(arg);
 
-                Transport.Send(json);
+                if (string.IsNullOrEmpty(json))
+                    HTTPManager.Logger.Error("SignalR Connection", "Failed to JSon encode the given argument. Please try to use an advanced JSon encoder(check the documentation how you can do it).");
+                else
+                    Transport.Send(json);
             }
+
+            return true;
         }
 
         /// <summary>
         /// Sends the given json string to the server.
         /// </summary>
-        public void SendJson(string json)
+        /// <returns>True if the plugin was able to send out the message</returns>
+        public bool SendJson(string json)
         {
             if (json == null)
                 throw new ArgumentNullException("json");
@@ -577,11 +689,15 @@ namespace BestHTTP.SignalR
             lock(SyncRoot)
             {
                 if (this.State != ConnectionStates.Connected)
-                    return;
+                    return false;
 
                 Transport.Send(json);
             }
+
+            return true;
         }
+
+        #endregion
 
         #region IManager Functions
 
@@ -749,6 +865,9 @@ namespace BestHTTP.SignalR
 
             HTTPManager.Logger.Error("SignalR Connection", reason);
 
+            //ReconnectStartedAt = null;
+            ReconnectStarted = false;
+
             if (OnError != null)
                 OnError(this, reason);
 
@@ -794,8 +913,10 @@ namespace BestHTTP.SignalR
                         goto default;
 
                     case RequestTypes.Connect:
+#if !BESTHTTP_DISABLE_WEBSOCKET
                         if (transport != null && transport.Type == TransportTypes.WebSocket)
                             uriBuilder.Scheme = HTTPProtocolFactory.IsSecureProtocol(Uri) ? "wss" : "ws";
+#endif
 
                         uriBuilder.Path += "connect";
                         goto default;
@@ -818,8 +939,10 @@ namespace BestHTTP.SignalR
                         goto default;
 
                     case RequestTypes.Reconnect:
+#if !BESTHTTP_DISABLE_WEBSOCKET
                         if (transport != null && transport.Type == TransportTypes.WebSocket)
                             uriBuilder.Scheme = HTTPProtocolFactory.IsSecureProtocol(Uri) ? "wss" : "ws";
+#endif
 
                         uriBuilder.Path += "reconnect";
 
@@ -872,7 +995,7 @@ namespace BestHTTP.SignalR
                         }
 
                         queryBuilder.Append("&clientProtocol=");
-                        queryBuilder.Append(ClientProtocol);
+                        queryBuilder.Append(ClientProtocols[(byte)Protocol]);
 
                         if (NegotiationResult != null && !string.IsNullOrEmpty(this.NegotiationResult.ConnectionToken))
                         {
@@ -956,7 +1079,7 @@ namespace BestHTTP.SignalR
 
                     if (PingRequest == null && DateTime.UtcNow - LastPingSentAt >= PingInterval)
                         Ping();
-                    
+
                     break;
 
                 default:
@@ -969,7 +1092,7 @@ namespace BestHTTP.SignalR
                         (this as IConnection).Error("Transport failed to connect in the given time!");
                     }
 
-                    if (ReconnectStartedAt != null && DateTime.UtcNow - ReconnectStartedAt >= NegotiationResult.DisconnectTimeout)
+                    if (ReconnectStarted && DateTime.UtcNow - ReconnectStartedAt >= NegotiationResult.DisconnectTimeout)
                     {
                         HTTPManager.Logger.Warning("SignalR Connection", "OnHeartbeatUpdate - Failed to reconnect in the given time!");
 
@@ -990,7 +1113,8 @@ namespace BestHTTP.SignalR
         {
             this.State = ConnectionStates.Connected;
 
-            ReconnectStartedAt = null;
+            //ReconnectStartedAt = null;
+            ReconnectStarted = false;
             TransportConnectionStartedAt = null;
 
             LastPingSentAt = DateTime.UtcNow;
@@ -1027,10 +1151,12 @@ namespace BestHTTP.SignalR
 
                 switch(NextProtocolToTry)
                 {
+#if !BESTHTTP_DISABLE_SERVERSENT_EVENTS
                     case SupportedProtocols.ServerSentEvents:
                         Transport = new ServerSentEventsTransport(this);
                         NextProtocolToTry = SupportedProtocols.HTTP;
                         break;
+#endif
 
                     case SupportedProtocols.HTTP:
                         Transport = new PollingTransport(this);
@@ -1040,7 +1166,7 @@ namespace BestHTTP.SignalR
                     case SupportedProtocols.Unknown:
                         return false;
                 }
-                
+
                 TransportConnectionStartedAt = DateTime.UtcNow;
 
                 Transport.Connect();
@@ -1052,6 +1178,14 @@ namespace BestHTTP.SignalR
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// This event will be called when the AdditonalQueryPrams dictionary changed. We have to reset the cached values.
+        /// </summary>
+        private void AdditionalQueryParams_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            BuiltQueryParams = null;
         }
 
         #endregion
@@ -1125,3 +1259,5 @@ namespace BestHTTP.SignalR
         #endregion
     }
 }
+
+#endif

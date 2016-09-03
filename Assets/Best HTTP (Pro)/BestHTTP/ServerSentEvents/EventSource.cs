@@ -1,6 +1,27 @@
-﻿using BestHTTP.Extensions;
+/*
+http://www.cgsoso.com/forum-211-1.html
+
+CG搜搜 Unity3d 每日Unity3d插件免费更新 更有VIP资源！
+
+CGSOSO 主打游戏开发，影视设计等CG资源素材。
+
+插件如若商用，请务必官网购买！
+
+daily assets update for try.
+
+U should buy the asset from home store if u use it in your project!
+*/
+
+#if !BESTHTTP_DISABLE_SERVERSENT_EVENTS
+
 using System;
 using System.Collections.Generic;
+
+using BestHTTP.Extensions;
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+    using System.Runtime.InteropServices;
+#endif
 
 namespace BestHTTP.ServerSentEvents
 {
@@ -24,12 +45,22 @@ namespace BestHTTP.ServerSentEvents
     public delegate void OnEventDelegate(EventSource eventSource, BestHTTP.ServerSentEvents.Message message);
     public delegate void OnStateChangedDelegate(EventSource eventSource, States oldState, States newState);
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+    
+    delegate void OnWebGLEventSourceOpenDelegate(uint id);
+    delegate void OnWebGLEventSourceMessageDelegate(uint id, string eventStr, string data, string eventId, int retry);
+    delegate void OnWebGLEventSourceErrorDelegate(uint id, string reason);
+#endif
+
     /// <summary>
     /// http://www.w3.org/TR/eventsource/
     /// </summary>
-    public class EventSource : IHeartbeat
+    public class EventSource
+#if !UNITY_WEBGL || UNITY_EDITOR
+        : IHeartbeat
+#endif
     {
-        #region Public Properties
+#region Public Properties
 
         /// <summary>
         /// Uri of the remote endpoint.
@@ -75,14 +106,16 @@ namespace BestHTTP.ServerSentEvents
         /// </summary>
         public string LastEventId { get; private set; }
 
+#if !UNITY_WEBGL || UNITY_EDITOR
         /// <summary>
         /// The internal request object of the EventSource.
         /// </summary>
         public HTTPRequest InternalRequest { get; private set; }
+#endif
 
-        #endregion
+#endregion
 
-        #region Public Events
+#region Public Events
 
         /// <summary>
         /// Called when successfully connected to the server.
@@ -99,10 +132,12 @@ namespace BestHTTP.ServerSentEvents
         /// </summary>
         public event OnErrorDelegate OnError;
 
+#if !UNITY_WEBGL || UNITY_EDITOR
         /// <summary>
         /// Called when the EventSource will try to do a retry attempt. If this function returns with false, it will cancel the attempt.
         /// </summary>
         public event OnRetryDelegate OnRetry;
+#endif
 
         /// <summary>
         /// Called when the EventSource object closed.
@@ -114,15 +149,16 @@ namespace BestHTTP.ServerSentEvents
         /// </summary>
         public event OnStateChangedDelegate OnStateChanged;
 
-        #endregion
+#endregion
 
-        #region Privates
+#region Privates
 
         /// <summary>
         /// A dictionary to store eventName => delegate mapping.
         /// </summary>
         private Dictionary<string, OnEventDelegate> EventTable;
 
+#if !UNITY_WEBGL || UNITY_EDITOR
         /// <summary>
         /// Number of retry attempts made.
         /// </summary>
@@ -132,6 +168,10 @@ namespace BestHTTP.ServerSentEvents
         /// When we called the Retry function. We will delay the Open call from here.
         /// </summary>
         private DateTime RetryCalled;
+#else
+        private static Dictionary<uint, EventSource> EventSources = new Dictionary<uint, EventSource>();
+        private uint Id;
+#endif
 
         #endregion
 
@@ -140,7 +180,8 @@ namespace BestHTTP.ServerSentEvents
             this.Uri = uri;
             this.ReconnectionTime = TimeSpan.FromMilliseconds(2000);
 
-            this.InternalRequest = new HTTPRequest(Uri, HTTPMethods.Get, false, true, OnRequestFinished);
+#if !UNITY_WEBGL || UNITY_EDITOR
+            this.InternalRequest = new HTTPRequest(Uri, HTTPMethods.Get, true, true, OnRequestFinished);
 
             // Set headers
             this.InternalRequest.SetHeader("Accept", "text/event-stream");
@@ -153,9 +194,10 @@ namespace BestHTTP.ServerSentEvents
 
             // Disable internal retry
             this.InternalRequest.DisableRetry = true;
+#endif
         }
 
-        #region Public Functions
+#region Public Functions
 
         /// <summary>
         /// Start to connect to the remote servr.
@@ -169,10 +211,16 @@ namespace BestHTTP.ServerSentEvents
 
             this.State = States.Connecting;
 
+#if !UNITY_WEBGL || UNITY_EDITOR
             if (!string.IsNullOrEmpty(this.LastEventId))
                 this.InternalRequest.SetHeader("Last-Event-ID", this.LastEventId);
 
             this.InternalRequest.Send();
+#else
+            this.Id = ES_Create(this.Uri.ToString(), true, OnOpenCallback, OnMessageCallback, OnErrorCallback);
+
+            EventSources.Add(this.Id, this);
+#endif
         }
 
         /// <summary>
@@ -185,11 +233,20 @@ namespace BestHTTP.ServerSentEvents
                 return;
 
             this.State = States.Closing;
-
+#if !UNITY_WEBGL || UNITY_EDITOR
             if (this.InternalRequest != null)
                 this.InternalRequest.Abort();
             else
                 this.State = States.Closed;
+#else
+            ES_Close(this.Id);
+
+            SetClosed("Close");
+
+            EventSources.Remove(this.Id);
+
+            ES_Release(this.Id);
+#endif
         }
 
         /// <summary>
@@ -215,9 +272,9 @@ namespace BestHTTP.ServerSentEvents
             EventTable.Remove(eventName);
         }
 
-        #endregion
+#endregion
 
-        #region Private Helper Functions
+#region Private Helper Functions
 
         private void CallOnError(string error, string msg)
         {
@@ -234,6 +291,7 @@ namespace BestHTTP.ServerSentEvents
             }
         }
 
+#if !UNITY_WEBGL || UNITY_EDITOR
         private bool CallOnRetry()
         {
             if (OnRetry != null)
@@ -250,6 +308,7 @@ namespace BestHTTP.ServerSentEvents
 
             return true;
         }
+#endif
 
         private void SetClosed(string msg)
         {
@@ -268,6 +327,7 @@ namespace BestHTTP.ServerSentEvents
             }
         }
 
+#if !UNITY_WEBGL || UNITY_EDITOR
         private void Retry()
         {
             if (RetryCount > 0 || 
@@ -284,10 +344,12 @@ namespace BestHTTP.ServerSentEvents
 
             this.State = States.Retrying;
         }
+#endif
 
-        #endregion
+#endregion
 
-        #region HTTP Request Implementation
+#region HTTP Request Implementation
+#if !UNITY_WEBGL || UNITY_EDITOR
 
         /// <summary>
         /// We are successfully upgraded to the EventSource protocol, we can start to receive and parse the incoming data.
@@ -326,7 +388,8 @@ namespace BestHTTP.ServerSentEvents
             if (this.State == States.Closed)
                 return;
 
-            if (this.State == States.Closing)
+            if (this.State == States.Closing ||
+                req.State == HTTPRequestStates.Aborted)
             {
                 SetClosed("OnRequestFinished");
 
@@ -408,12 +471,16 @@ namespace BestHTTP.ServerSentEvents
             else
                 SetClosed("OnRequestFinished");
         }
+#endif
+#endregion
 
-        #endregion
+#region EventStreamResponse Event Handlers
 
-        #region EventStreamResponse Event Handlers
-
-        private void OnMessageReceived(EventSourceResponse resp, BestHTTP.ServerSentEvents.Message message)
+        private void OnMessageReceived(
+#if !UNITY_WEBGL || UNITY_EDITOR
+            EventSourceResponse resp,
+#endif
+            BestHTTP.ServerSentEvents.Message message)
         {
             if (this.State >= States.Closing)
                 return;
@@ -466,9 +533,10 @@ namespace BestHTTP.ServerSentEvents
             }
         }
 
-        #endregion
+#endregion
 
-        #region IHeartbeat Implementation
+#region IHeartbeat Implementation
+#if !UNITY_WEBGL || UNITY_EDITOR
 
         void IHeartbeat.OnHeartbeatUpdate(TimeSpan dif)
         {
@@ -489,7 +557,93 @@ namespace BestHTTP.ServerSentEvents
                 HTTPManager.Heartbeats.Unsubscribe(this);
             }
         }
-
+#endif
         #endregion
+
+        #region WebGL Static Callbacks
+#if UNITY_WEBGL && !UNITY_EDITOR
+
+        [AOT.MonoPInvokeCallback(typeof(OnWebGLEventSourceOpenDelegate))]
+        static void OnOpenCallback(uint id)
+        {
+            EventSource es;
+            if (EventSources.TryGetValue(id, out es))
+            {
+                if (es.OnOpen != null)
+                {
+                    try
+                    {
+                        es.OnOpen(es);
+                    }
+                    catch(Exception ex)
+                    {
+                        HTTPManager.Logger.Exception("EventSource", "OnOpen", ex);
+                    }
+                }
+
+                es.State = States.Open;
+            }
+            else
+                HTTPManager.Logger.Warning("EventSource", "OnOpenCallback - No EventSource found for id: " + id.ToString());
+        }
+
+        [AOT.MonoPInvokeCallback(typeof(OnWebGLEventSourceMessageDelegate))]
+        static void OnMessageCallback(uint id, string eventStr, string data, string eventId, int retry)
+        {
+            EventSource es;
+            if (EventSources.TryGetValue(id, out es))
+            {
+                var msg = new BestHTTP.ServerSentEvents.Message();
+                msg.Id = eventId;
+                msg.Data = data;
+                msg.Event = eventStr;
+                msg.Retry = TimeSpan.FromSeconds(retry);
+
+                es.OnMessageReceived(msg);
+            }
+        }
+
+        [AOT.MonoPInvokeCallback(typeof(OnWebGLEventSourceErrorDelegate))]
+        static void OnErrorCallback(uint id, string reason)
+        {
+            EventSource es;
+            if (EventSources.TryGetValue(id, out es))
+            {
+                es.CallOnError(reason, "OnErrorCallback");
+                es.SetClosed("OnError");
+
+                EventSources.Remove(id);
+            }
+
+            try
+            {
+                ES_Release(id);
+            }
+            catch (Exception ex)
+            {
+                HTTPManager.Logger.Exception("EventSource", "ES_Release", ex);
+            }
+        }
+
+#endif
+        #endregion
+
+        #region WebGL Interface
+#if UNITY_WEBGL && !UNITY_EDITOR
+
+        [DllImport("__Internal")]
+        static extern uint ES_Create(string url, bool withCred, OnWebGLEventSourceOpenDelegate onOpen, OnWebGLEventSourceMessageDelegate onMessage, OnWebGLEventSourceErrorDelegate onError);
+
+        [DllImport("__Internal")]
+        static extern void ES_Close(uint id);
+
+        [DllImport("__Internal")]
+        static extern void ES_Release(uint id);
+
+#endif
+        #endregion
+
     }
 }
+
+#endif

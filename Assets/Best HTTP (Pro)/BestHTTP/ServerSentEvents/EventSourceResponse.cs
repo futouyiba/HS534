@@ -1,12 +1,23 @@
-﻿using System;
+/*
+http://www.cgsoso.com/forum-211-1.html
+
+CG搜搜 Unity3d 每日Unity3d插件免费更新 更有VIP资源！
+
+CGSOSO 主打游戏开发，影视设计等CG资源素材。
+
+插件如若商用，请务必官网购买！
+
+daily assets update for try.
+
+U should buy the asset from home store if u use it in your project!
+*/
+
+#if !BESTHTTP_DISABLE_SERVERSENT_EVENTS && (!UNITY_WEBGL || UNITY_EDITOR)
+
+using System;
 using System.IO;
 using System.Threading;
 
-#if NETFX_CORE
-using LegacySystem;
-#endif
-
-using BestHTTP;
 using System.Text;
 using System.Collections.Generic;
 
@@ -28,11 +39,6 @@ namespace BestHTTP.ServerSentEvents
         #endregion
 
         #region Privates
-
-        /// <summary>
-        /// On this thred we will receive the incoming data
-        /// </summary>
-        private Thread ReceiverThread;
 
         /// <summary>
         /// Thread sync object
@@ -87,18 +93,20 @@ namespace BestHTTP.ServerSentEvents
         {
             if (IsUpgraded)
             {
-                ReceiverThread = new Thread(ReceiveThreadFunc);
-#if !NETFX_CORE
-                ReceiverThread.Name = "EventSource Receiver Thread";
-                ReceiverThread.IsBackground = true;
+#if NETFX_CORE
+                #pragma warning disable 4014
+                    Windows.System.Threading.ThreadPool.RunAsync(ReceiveThreadFunc);
+                #pragma warning restore 4014
+#else
+                new Thread(ReceiveThreadFunc)
+                    .Start();
 #endif
-                ReceiverThread.Start();
             }
         }
 
         #region Private Threading Functions
 
-        private void ReceiveThreadFunc()
+        private void ReceiveThreadFunc(object param)
         {
             try
             {
@@ -107,14 +115,21 @@ namespace BestHTTP.ServerSentEvents
                 else
                     ReadRaw(Stream, -1);
             }
+#if !NETFX_CORE
             catch (ThreadAbortException)
             {
                 this.baseRequest.State = HTTPRequestStates.Aborted;
             }
+#endif
             catch (Exception e)
             {
-                this.baseRequest.Exception = e;
-                this.baseRequest.State = HTTPRequestStates.Error;
+                if (HTTPUpdateDelegator.IsCreated)
+                {
+                    this.baseRequest.Exception = e;
+                    this.baseRequest.State = HTTPRequestStates.Error;
+                }
+                else
+                    this.baseRequest.State = HTTPRequestStates.Aborted;
             }
             finally
             {
@@ -224,7 +239,8 @@ namespace BestHTTP.ServerSentEvents
                 ParseLine(LineBuffer, LineBufferPos);
                 
                 LineBufferPos = 0;
-                pos += newlineIdx + skipCount;
+                //pos += newlineIdx + skipCount;
+                pos = newlineIdx + skipCount;
 
             }while(newlineIdx != -1 && pos < count);
         }
@@ -371,3 +387,5 @@ namespace BestHTTP.ServerSentEvents
         }
     }
 }
+
+#endif

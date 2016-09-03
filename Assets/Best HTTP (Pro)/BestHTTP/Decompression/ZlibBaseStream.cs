@@ -1,3 +1,17 @@
+/*
+http://www.cgsoso.com/forum-211-1.html
+
+CG搜搜 Unity3d 每日Unity3d插件免费更新 更有VIP资源！
+
+CGSOSO 主打游戏开发，影视设计等CG资源素材。
+
+插件如若商用，请务必官网购买！
+
+daily assets update for try.
+
+U should buy the asset from home store if u use it in your project!
+*/
+
 // ZlibBaseStream.cs
 // ------------------------------------------------------------------
 //
@@ -44,6 +58,7 @@ namespace BestHTTP.Decompression.Zlib
         protected internal bool _leaveOpen;
         protected internal byte[] _workingBuffer;
         protected internal int _bufferSize = ZlibConstants.WorkingBufferSizeDefault;
+        protected internal int windowBitsMax;
         protected internal byte[] _buf1 = new byte[1];
 
         protected internal System.IO.Stream _stream;
@@ -63,6 +78,15 @@ namespace BestHTTP.Decompression.Zlib
                               CompressionLevel level,
                               ZlibStreamFlavor flavor,
                               bool leaveOpen)
+            :this(stream, compressionMode, level, flavor,leaveOpen, ZlibConstants.WindowBitsDefault)
+        { }
+
+        public ZlibBaseStream(System.IO.Stream stream,
+                              CompressionMode compressionMode,
+                              CompressionLevel level,
+                              ZlibStreamFlavor flavor,
+                              bool leaveOpen,
+                              int windowBits)
             : base()
         {
             this._flushMode = FlushType.None;
@@ -72,6 +96,7 @@ namespace BestHTTP.Decompression.Zlib
             this._compressionMode = compressionMode;
             this._flavor = flavor;
             this._level = level;
+            this.windowBitsMax = windowBits;
             // workitem 7159
             if (flavor == ZlibStreamFlavor.GZIP)
             {
@@ -98,12 +123,12 @@ namespace BestHTTP.Decompression.Zlib
                     _z = new ZlibCodec();
                     if (this._compressionMode == CompressionMode.Decompress)
                     {
-                        _z.InitializeInflate(wantRfc1950Header);
+                        _z.InitializeInflate(this.windowBitsMax, wantRfc1950Header);
                     }
                     else
                     {
                         _z.Strategy = Strategy;
-                        _z.InitializeDeflate(this._level, wantRfc1950Header);
+                        _z.InitializeDeflate(this._level, this.windowBitsMax, wantRfc1950Header);
                     }
                 }
                 return _z;
@@ -299,9 +324,9 @@ namespace BestHTTP.Decompression.Zlib
         }
 
 
-        public 
+        public
 #if !NETFX_CORE
-            override 
+            override
 #endif
             void Close()
         {
@@ -331,6 +356,7 @@ namespace BestHTTP.Decompression.Zlib
         public override void SetLength(System.Int64 value)
         {
             _stream.SetLength(value);
+            nomoreinput = false;
         }
 
 

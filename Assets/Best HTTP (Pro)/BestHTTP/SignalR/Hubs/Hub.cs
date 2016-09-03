@@ -1,9 +1,22 @@
-﻿using System;
+/*
+http://www.cgsoso.com/forum-211-1.html
+
+CG搜搜 Unity3d 每日Unity3d插件免费更新 更有VIP资源！
+
+CGSOSO 主打游戏开发，影视设计等CG资源素材。
+
+插件如若商用，请务必官网购买！
+
+daily assets update for try.
+
+U should buy the asset from home store if u use it in your project!
+*/
+
+#if !BESTHTTP_DISABLE_SIGNALR
+
+using System;
 using System.Collections.Generic;
 
-using BestHTTP;
-using BestHTTP.SignalR;
-using BestHTTP.SignalR.Transports;
 using BestHTTP.SignalR.Messages;
 using System.Text;
 
@@ -106,18 +119,20 @@ namespace BestHTTP.SignalR.Hubs
         /// <summary>
         /// Orders the server to call a method with the given arguments.
         /// </summary>
-        public void Call(string method, params object[] args)
+        /// <returns>True if the plugin was able to send out the message</returns>
+        public bool Call(string method, params object[] args)
         {
-            Call(method, null, null, null, args);
+            return Call(method, null, null, null, args);
         }
 
         /// <summary>
         /// Orders the server to call a method with the given arguments.
         /// The onResult callback will be called when the server successfully called the function.
         /// </summary>
-        public void Call(string method, OnMethodResultDelegate onResult, params object[] args)
+        /// <returns>True if the plugin was able to send out the message</returns>
+        public bool Call(string method, OnMethodResultDelegate onResult, params object[] args)
         {
-            Call(method, onResult, null, null, args);
+            return Call(method, onResult, null, null, args);
         }
 
         /// <summary>
@@ -125,9 +140,10 @@ namespace BestHTTP.SignalR.Hubs
         /// The onResult callback will be called when the server successfully called the function.
         /// The onResultError will be called when the server can't call the function, or when the function throws an exception.
         /// </summary>
-        public void Call(string method, OnMethodResultDelegate onResult, OnMethodFailedDelegate onResultError, params object[] args)
+        /// <returns>True if the plugin was able to send out the message</returns>
+        public bool Call(string method, OnMethodResultDelegate onResult, OnMethodFailedDelegate onResultError, params object[] args)
         {
-            Call(method, onResult, onResultError, null, args);
+            return Call(method, onResult, onResultError, null, args);
         }
 
         /// <summary>
@@ -135,9 +151,10 @@ namespace BestHTTP.SignalR.Hubs
         /// The onResult callback will be called when the server successfully called the function.
         /// The onProgress callback called multiple times when the method is a long runnning function and reports back its progress.
         /// </summary>
-        public void Call(string method, OnMethodResultDelegate onResult, OnMethodProgressDelegate onProgress, params object[] args)
+        /// <returns>True if the plugin was able to send out the message</returns>
+        public bool Call(string method, OnMethodResultDelegate onResult, OnMethodProgressDelegate onProgress, params object[] args)
         {
-            Call(method, onResult, null, onProgress, args);
+            return Call(method, onResult, null, onProgress, args);
         }
 
         /// <summary>
@@ -146,7 +163,8 @@ namespace BestHTTP.SignalR.Hubs
         /// The onResultError will be called when the server can't call the function, or when the function throws an exception.
         /// The onProgress callback called multiple times when the method is a long runnning function and reports back its progress.
         /// </summary>
-        public void Call(string method, OnMethodResultDelegate onResult, OnMethodFailedDelegate onResultError, OnMethodProgressDelegate onProgress, params object[] args)
+        /// <returns>True if the plugin was able to send out the message</returns>
+        public bool Call(string method, OnMethodResultDelegate onResult, OnMethodFailedDelegate onResultError, OnMethodProgressDelegate onProgress, params object[] args)
         {
             IHub thisHub = this as IHub;
 
@@ -157,7 +175,7 @@ namespace BestHTTP.SignalR.Hubs
                 thisHub.Connection.ClientMessageCounter %= UInt64.MaxValue;
 
                 // Create and send the client message
-                thisHub.Call(new ClientMessage(this, method, args, thisHub.Connection.ClientMessageCounter++, onResult, onResultError, onProgress));
+                return thisHub.Call(new ClientMessage(this, method, args, thisHub.Connection.ClientMessageCounter++, onResult, onResultError, onProgress));
             }
         }
 
@@ -165,15 +183,19 @@ namespace BestHTTP.SignalR.Hubs
 
         #region IHub Implementation
 
-        void IHub.Call(ClientMessage msg)
+        bool IHub.Call(ClientMessage msg)
         {
             IHub thisHub = this as IHub;
+
             lock (thisHub.Connection.SyncRoot)
             {
+                if (!thisHub.Connection.SendJson(BuildMessage(msg)))
+                    return false;
+                
                 SentMessages.Add(msg.CallIdx, msg);
-
-                thisHub.Connection.SendJson(BuildMessage(msg));
             }
+
+            return true;
         }
 
         /// <summary>
@@ -225,7 +247,7 @@ namespace BestHTTP.SignalR.Hubs
                 }
             }
             else
-                HTTPManager.Logger.Information("Hub - " + this.Name, string.Format("[Client] {0}.{1} (args: {2})", this.Name, msg.Method, msg.Arguments.Length));
+                HTTPManager.Logger.Warning("Hub - " + this.Name, string.Format("[Client] {0}.{1} (args: {2})", this.Name, msg.Method, msg.Arguments.Length));
         }
 
         /// <summary>
@@ -253,7 +275,16 @@ namespace BestHTTP.SignalR.Hubs
                     MergeState(result.State);
 
                     if (originalMsg.ResultCallback != null)
-                        originalMsg.ResultCallback(this, originalMsg, result);
+                    {
+                        try
+                        {
+                            originalMsg.ResultCallback(this, originalMsg, result);
+                        }
+                        catch(Exception ex)
+                        {
+                            HTTPManager.Logger.Exception("Hub " + this.Name, "IHub.OnMessage - ResultCallback", ex);
+                        }
+                    }
 
                     SentMessages.Remove(id);
 
@@ -266,14 +297,32 @@ namespace BestHTTP.SignalR.Hubs
                     MergeState(error.State);
 
                     if (originalMsg.ResultErrorCallback != null)
-                        originalMsg.ResultErrorCallback(this, originalMsg, error);
+                    {
+                        try
+                        {
+                            originalMsg.ResultErrorCallback(this, originalMsg, error);
+                        }
+                        catch(Exception ex)
+                        {
+                            HTTPManager.Logger.Exception("Hub " + this.Name, "IHub.OnMessage - ResultErrorCallback", ex);
+                        }
+                    }
 
                     SentMessages.Remove(id);
                     break;
 
                 case MessageTypes.Progress:
                     if (originalMsg.ProgressCallback != null)
-                        originalMsg.ProgressCallback(this, originalMsg, msg as ProgressMessage);
+                    {
+                        try
+                        {
+                            originalMsg.ProgressCallback(this, originalMsg, msg as ProgressMessage);
+                        }
+                        catch(Exception ex)
+                        {
+                            HTTPManager.Logger.Exception("Hub " + this.Name, "IHub.OnMessage - ProgressCallback", ex);
+                        }
+                    }
                     break;
             }
         }
@@ -348,3 +397,5 @@ namespace BestHTTP.SignalR.Hubs
         #endregion
     }
 }
+
+#endif

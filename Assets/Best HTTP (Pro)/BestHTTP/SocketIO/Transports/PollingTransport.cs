@@ -1,7 +1,20 @@
-﻿using System;
-using UnityEngine;
+/*
+http://www.cgsoso.com/forum-211-1.html
 
-using BestHTTP.SocketIO.Events;
+CG搜搜 Unity3d 每日Unity3d插件免费更新 更有VIP资源！
+
+CGSOSO 主打游戏开发，影视设计等CG资源素材。
+
+插件如若商用，请务必官网购买！
+
+daily assets update for try.
+
+U should buy the asset from home store if u use it in your project!
+*/
+
+#if !BESTHTTP_DISABLE_SOCKETIO
+
+using System;
 
 namespace BestHTTP.SocketIO.Transports
 {
@@ -51,8 +64,11 @@ namespace BestHTTP.SocketIO.Transports
                                                                  !Manager.Options.QueryParamsOnlyForHandshake ? Manager.Options.BuildQueryParams() : string.Empty)),
                                           OnRequestFinished);
             
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
             // Don't even try to cache it
             request.DisableCache = true;
+#endif
+
             request.DisableRetry = true;
 
             request.Send();
@@ -127,8 +143,10 @@ namespace BestHTTP.SocketIO.Transports
                                           OnRequestFinished);
 
 
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
             // Don't even try to cache it
             LastRequest.DisableCache = true;
+#endif
 
             LastRequest.SetHeader("Content-Type", "application/octet-stream");
             LastRequest.RawData = buffer;
@@ -207,8 +225,11 @@ namespace BestHTTP.SocketIO.Transports
                                         HTTPMethods.Get,
                                         OnPollRequestFinished);
 
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
             // Don't even try to cache it
             PollRequest.DisableCache = true;
+#endif
+
             PollRequest.DisableRetry = true;
 
             PollRequest.Send();
@@ -384,3 +405,5 @@ namespace BestHTTP.SocketIO.Transports
         #endregion
     }
 }
+
+#endif

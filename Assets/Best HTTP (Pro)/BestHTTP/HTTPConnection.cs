@@ -1,31 +1,54 @@
-﻿#if !NETFX_CORE
-// http://www.dzhang.com/blog/2012/08/29/synchronization-in-async-csharp-methods
-//#define LOCK_ON_FILE
-#endif
+/*
+http://www.cgsoso.com/forum-211-1.html
+
+CG搜搜 Unity3d 每日Unity3d插件免费更新 更有VIP资源！
+
+CGSOSO 主打游戏开发，影视设计等CG资源素材。
+
+插件如若商用，请务必官网购买！
+
+daily assets update for try.
+
+U should buy the asset from home store if u use it in your project!
+*/
 
 using System;
 using System.Collections.Generic;
 using System.IO;
-#if (!UNITY_WP8 && !UNITY_WINRT && !UNITY_METRO) || UNITY_EDITOR
-using System.Net.Security;
-using System.Security.Cryptography.X509Certificates;
-#endif
+
 using System.Text;
 using System.Threading;
-using BestHTTP.Caching;
-
-using TcpClient = SocketEx.TcpClient;
 using BestHTTP.Extensions;
 using BestHTTP.Authentication;
-using Org.BouncyCastle.Crypto.Tls;
-using BestHTTP.Cookies;
 
-#if NETFX_CORE
-using System.Threading.Tasks;
-using Windows.Networking.Sockets;
+#if (!NETFX_CORE && !UNITY_WP8) || UNITY_EDITOR
+    using System.Net.Security;
+#endif
 
-//Disable CD4014: Because this call is not awaited, execution of the current method continues before the call is completed. Consider applying the 'await' operator to the result of the call.
-#pragma warning disable 4014
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
+    using BestHTTP.Caching;
+#endif
+
+#if !BESTHTTP_DISABLE_ALTERNATE_SSL && (!UNITY_WEBGL || UNITY_EDITOR)
+    using Org.BouncyCastle.Crypto.Tls;
+#endif
+
+#if !BESTHTTP_DISABLE_COOKIES && (!UNITY_WEBGL || UNITY_EDITOR)
+    using BestHTTP.Cookies;
+#endif
+
+#if NETFX_CORE || BUILD_FOR_WP8
+    using System.Threading.Tasks;
+    using Windows.Networking.Sockets;
+
+    using TcpClient = BestHTTP.PlatformSupport.TcpClient.WinRT.TcpClient;
+
+    //Disable CD4014: Because this call is not awaited, execution of the current method continues before the call is completed. Consider applying the 'await' operator to the result of the call.
+    #pragma warning disable 4014
+#elif UNITY_WP8 && !UNITY_EDITOR
+    using TcpClient = BestHTTP.PlatformSupport.TcpClient.WP8.TcpClient;
+#else
+    using TcpClient = BestHTTP.PlatformSupport.TcpClient.General.TcpClient;
 #endif
 
 namespace BestHTTP
@@ -33,7 +56,7 @@ namespace BestHTTP
     /// <summary>
     /// Represents and manages a connection to a server.
     /// </summary>
-    internal sealed class HTTPConnection : IDisposable
+    internal sealed class HTTPConnection : ConnectionBase
     {
         private enum RetryCauses
         {
@@ -52,102 +75,28 @@ namespace BestHTTP
             /// </summary>
             Authenticate,
 
+#if !BESTHTTP_DISABLE_PROXY
             /// <summary>
             /// The proxy needs authentication.
             /// </summary>
             ProxyAuthenticate,
+#endif
         }
-
-        #region Public Properties
-
-        /// <summary>
-        /// The address of the server that this connection is bound to.
-        /// </summary>
-        internal string ServerAddress { get; private set; }
-
-        /// <summary>
-        /// The state of this connection.
-        /// </summary>
-        internal HTTPConnectionStates State { get; private set; }
-
-        /// <summary>
-        /// It's true if this connection is available to process a HTTPRequest.
-        /// </summary>
-        internal bool IsFree { get { return State == HTTPConnectionStates.Initial || State == HTTPConnectionStates.Free; } }
-
-        /// <summary>
-        /// Returns true if it's an active connection.
-        /// </summary>
-        internal bool IsActive { get { return State > HTTPConnectionStates.Initial && State < HTTPConnectionStates.Free; } }
-
-        /// <summary>
-        /// If the State is HTTPConnectionStates.Processing, then it holds a HTTPRequest instance. Otherwise it's null.
-        /// </summary>
-        internal HTTPRequest CurrentRequest { get; private set; }
-
-        internal bool IsRemovable { get { return IsFree && (DateTime.UtcNow - LastProcessTime) > HTTPManager.MaxConnectionIdleTime; } }
-
-        /// <summary>
-        /// When we start to process the current request. It's set after the connection is estabilished.
-        /// </summary>
-        internal DateTime StartTime { get; private set; }
-
-        /// <summary>
-        /// When this connection timed out.
-        /// </summary>
-        internal DateTime TimedOutStart { get; private set; }
-
-        internal HTTPProxy Proxy { get; private set; }
-        internal bool HasProxy { get { return Proxy != null; } }
-        internal Uri LastProcessedUri { get; private set; }
-
-        #endregion
 
         #region Private Properties
 
         private TcpClient Client;
         private Stream Stream;
-        private DateTime LastProcessTime;
 
         #endregion
 
         internal HTTPConnection(string serverAddress)
-        {
-            this.ServerAddress = serverAddress;
-            this.State = HTTPConnectionStates.Initial;
-            this.LastProcessTime = DateTime.UtcNow;
-        }
-
-        internal void Process(HTTPRequest request)
-        {
-            if (State == HTTPConnectionStates.Processing)
-                throw new Exception("Connection already processing a request!");
-
-            StartTime = DateTime.MaxValue;
-            State = HTTPConnectionStates.Processing;
-
-            CurrentRequest = request;
-#if NETFX_CORE
-            Windows.System.Threading.ThreadPool.RunAsync(ThreadFunc);
-#else
-            //ThreadPool.QueueUserWorkItem(new WaitCallback(ThreadFunc));
-            new Thread(ThreadFunc).Start();
-#endif
-        }
-
-        internal void Recycle()
-        {
-            // When we recycle a timed out connection force the manager to remove it.
-            if (State == HTTPConnectionStates.TimedOut)
-                LastProcessTime = DateTime.MinValue;
-
-            State = HTTPConnectionStates.Free;
-            CurrentRequest = null;
-        }
+            :base(serverAddress)
+        {}
 
         #region Request Processing Implementation
 
-        private
+        protected override
 #if NETFX_CORE
             async
 #endif
@@ -158,25 +107,18 @@ namespace BestHTTP
 
             RetryCauses cause = RetryCauses.None;
 
-#if LOCK_ON_FILE
-            object uriLock = null;
-#endif
-
             try
             {
+#if !BESTHTTP_DISABLE_PROXY
                 if (!HasProxy && CurrentRequest.HasProxy)
                     Proxy = CurrentRequest.Proxy;
-
-                // Lock only if we will use the cached entity.
-#if LOCK_ON_FILE
-
-                if (!CurrentRequest.DisableCache)
-                    Monitor.Enter(uriLock = HTTPCacheFileLock.Acquire(CurrentRequest.CurrentUri));
 #endif
 
-                // Try load the full response from an already saved cache entity. If the response 
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
+                // Try load the full response from an already saved cache entity. If the response
                 if (TryLoadAllFromCache())
                     return;
+#endif
 
                 if (Client != null && !Client.IsConnected())
                     Close();
@@ -203,9 +145,11 @@ namespace BestHTTP
                     if (State == HTTPConnectionStates.AbortRequested)
                         throw new Exception("AbortRequested");
 
+                    #if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
                     // Setup cache control headers before we send out the request
                     if (!CurrentRequest.DisableCache)
                         HTTPCacheService.SetHeaders(CurrentRequest);
+                    #endif
 
                     // Write the request to the stream
                     // sentRequest will be true if the request sent out successfully(no SocketException), so we can try read the response
@@ -249,6 +193,12 @@ namespace BestHTTP
 
                         if (CurrentRequest.Response != null)
                         {
+#if !BESTHTTP_DISABLE_COOKIES && (!UNITY_WEBGL || UNITY_EDITOR)
+                            // Try to store cookies before we do anything else, as we may remove the response deleting the cookies as well.
+                            if (CurrentRequest.IsCookiesEnabled)
+                                CookieJar.Set(CurrentRequest.Response);
+#endif
+
                             switch (CurrentRequest.Response.StatusCode)
                             {
                                 // Not authorized
@@ -268,6 +218,7 @@ namespace BestHTTP
                                         goto default;
                                     }
 
+#if !BESTHTTP_DISABLE_PROXY
                                 // Proxy authentication required
                                 // http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.8
                                 case 407:
@@ -287,6 +238,7 @@ namespace BestHTTP
 
                                         goto default;
                                     }
+#endif
 
                                 // Redirected
                                 case 301: // http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.3.2
@@ -334,15 +286,15 @@ namespace BestHTTP
                                         goto default;
                                     }
 
-                                default:
-                                    if (CurrentRequest.IsCookiesEnabled)
-                                        CookieJar.Set(CurrentRequest.Response);
 
+                                default:
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
                                     TryStoreInCache();
+#endif
                                     break;
                             }
 
-                            // If we have a response and the server telling us that it closed the connection after the message sent to us, then 
+                            // If we have a response and the server telling us that it closed the connection after the message sent to us, then
                             //  we will colse the connection too.
                             if (CurrentRequest.Response == null || (!CurrentRequest.Response.IsClosedManually && CurrentRequest.Response.HasHeaderWithValue("connection", "close")))
                                 Close();
@@ -363,14 +315,17 @@ namespace BestHTTP
             {
                 if (CurrentRequest != null)
                 {
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
                     if (CurrentRequest.UseStreaming)
                         HTTPCacheService.DeleteEntity(CurrentRequest.CurrentUri);
+#endif
 
                     // Something gone bad, Response must be null!
                     CurrentRequest.Response = null;
 
                     switch (State)
                     {
+                        case HTTPConnectionStates.Closed:
                         case HTTPConnectionStates.AbortRequested:
                             CurrentRequest.State = HTTPRequestStates.Aborted;
                             break;
@@ -390,11 +345,6 @@ namespace BestHTTP
             {
                 if (CurrentRequest != null)
                 {
-#if LOCK_ON_FILE
-                    if (!CurrentRequest.DisableCache && uriLock != null)
-                        Monitor.Exit(uriLock);
-#endif
-
                     // Avoid state changes. While we are in this block changing the connection's State, on Unity's main thread
                     //  the HTTPManager's OnUpdate will check the connections's State and call functions that can change the inner state of
                     //  the object. (Like setting the CurrentRequest to null in function Recycle() causing a NullRef exception)
@@ -418,17 +368,29 @@ namespace BestHTTP
                             State = HTTPConnectionStates.Closed;
 
                         LastProcessTime = DateTime.UtcNow;
+
+                        if (OnConnectionRecycled != null)
+                            RecycleNow();
                     }
 
+                    #if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
                     HTTPCacheService.SaveLibrary();
+                    #endif
+
+                    #if !BESTHTTP_DISABLE_COOKIES && (!UNITY_WEBGL || UNITY_EDITOR)
                     CookieJar.Persist();
+                    #endif
                 }
             }
         }
 
         private void Connect()
         {
-            Uri uri = CurrentRequest.HasProxy ? CurrentRequest.Proxy.Address : CurrentRequest.CurrentUri;
+            Uri uri =
+#if !BESTHTTP_DISABLE_PROXY
+                CurrentRequest.HasProxy ? CurrentRequest.Proxy.Address :
+#endif
+                CurrentRequest.CurrentUri;
 
             #region TCP Connection
 
@@ -439,15 +401,12 @@ namespace BestHTTP
             {
                 Client.ConnectTimeout = CurrentRequest.ConnectTimeout;
 
-#if NETFX_CORE
-                Client.UseHTTPSProtocol = !CurrentRequest.UseAlternateSSL && HTTPProtocolFactory.IsSecureProtocol(uri);
-
-                // On WinRT and >WP8 we use the more secure Tls12 protocol, but on WP8 only Ssl is available...
-                #if UNITY_WP_8_1 || UNITY_METRO_8_1 || UNITY_METRO
-                    Client.HTTPSProtocol = (int)SocketProtectionLevel.Tls12;
-                #else
-                    Client.HTTPSProtocol = (int)SocketProtectionLevel.Ssl;
+#if NETFX_CORE || (UNITY_WP8 && !UNITY_EDITOR)
+                Client.UseHTTPSProtocol =
+                #if !BESTHTTP_DISABLE_ALTERNATE_SSL && (!UNITY_WEBGL || UNITY_EDITOR)
+                    !CurrentRequest.UseAlternateSSL &&
                 #endif
+                    HTTPProtocolFactory.IsSecureProtocol(uri);
 #endif
 
                 Client.Connect(uri.Host, uri.Port);
@@ -467,6 +426,7 @@ namespace BestHTTP
             {
                 bool isSecure = HTTPProtocolFactory.IsSecureProtocol(CurrentRequest.CurrentUri);
 
+#if !BESTHTTP_DISABLE_PROXY
                 #region Proxy Handling
 
                 if (HasProxy && (!Proxy.IsTransparent || (isSecure && Proxy.NonTransparentForHTTPS)))
@@ -524,7 +484,7 @@ namespace BestHTTP
 
                         // Make sure to send all the wrote data to the wire
                         outStream.Flush();
-                        
+
                         CurrentRequest.ProxyResponse = new HTTPResponse(CurrentRequest, Stream, false, false);
 
                         // Read back the response of the proxy
@@ -560,15 +520,15 @@ namespace BestHTTP
 
                     } while (retry);
                 }
-
                 #endregion
+#endif // #if !BESTHTTP_DISABLE_PROXY
 
                 // We have to use CurrentRequest.CurrentUri here, becouse uri can be a proxy uri with a different protocol
                 if (isSecure)
                 {
                     #region SSL Upgrade
 
-                    // On WP8 there are no Mono, so we must use the 'alternate' TlsHandlers
+#if !BESTHTTP_DISABLE_ALTERNATE_SSL && (!UNITY_WEBGL || UNITY_EDITOR)
                     if (CurrentRequest.UseAlternateSSL)
                     {
                         var handler = new TlsClientProtocol(Client.GetStream(), new Org.BouncyCastle.Security.SecureRandom());
@@ -579,15 +539,16 @@ namespace BestHTTP
                         hostNames.Add(CurrentRequest.CurrentUri.Host);
 
                         handler.Connect(new LegacyTlsClient(CurrentRequest.CurrentUri,
-                                                            CurrentRequest.CustomCertificateVerifyer == null ? new AlwaysValidVerifyer() : CurrentRequest.CustomCertificateVerifyer, 
-                                                            null, 
+                                                            CurrentRequest.CustomCertificateVerifyer == null ? new AlwaysValidVerifyer() : CurrentRequest.CustomCertificateVerifyer,
+                                                            CurrentRequest.CustomClientCredentialsProvider,
                                                             hostNames));
 
                         Stream = handler.Stream;
                     }
                     else
+#endif
                     {
-#if !UNITY_WP8 && !NETFX_CORE
+#if !NETFX_CORE && !UNITY_WP8
                         SslStream sslStream = new SslStream(Client.GetStream(), false, (sender, cert, chain, errors) =>
                         {
                             return CurrentRequest.CallCustomCertificationValidator(cert, chain);
@@ -622,14 +583,17 @@ namespace BestHTTP
             // We didn't check HTTPManager.IsCachingDisabled's value on purpose. (sending out a request with conditional get then change IsCachingDisabled to true may produce undefined behavior)
             if (CurrentRequest.Response.StatusCode == 304)
             {
-                int bodyLength;
-                using (var cacheStream = HTTPCacheService.GetBody(CurrentRequest.CurrentUri, out bodyLength))
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
+                if (CurrentRequest.IsRedirected)
                 {
-                    if (!CurrentRequest.Response.HasHeader("content-length"))
-                        CurrentRequest.Response.Headers.Add("content-length", new List<string>(1) { bodyLength.ToString() });
-                    CurrentRequest.Response.IsFromCache = true;
-                    CurrentRequest.Response.ReadRaw(cacheStream, bodyLength);
+                    if (!LoadFromCache(CurrentRequest.RedirectUri))
+                        LoadFromCache(CurrentRequest.Uri);
                 }
+                else
+                    LoadFromCache(CurrentRequest.Uri);
+#else
+                return false;
+#endif
             }
 
             return true;
@@ -638,6 +602,25 @@ namespace BestHTTP
         #endregion
 
         #region Helper Functions
+
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
+
+        private bool LoadFromCache(Uri uri)
+        {
+            int bodyLength;
+            using (var cacheStream = HTTPCacheService.GetBody(uri, out bodyLength))
+            {
+                if (cacheStream == null)
+                    return false;
+
+                if (!CurrentRequest.Response.HasHeader("content-length"))
+                    CurrentRequest.Response.Headers.Add("content-length", new List<string>(1) { bodyLength.ToString() });
+                CurrentRequest.Response.IsFromCache = true;
+                CurrentRequest.Response.ReadRaw(cacheStream, bodyLength);
+            }
+
+            return true;
+        }
 
         private bool TryLoadAllFromCache()
         {
@@ -665,7 +648,9 @@ namespace BestHTTP
 
             return false;
         }
+#endif
 
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
         private void TryStoreInCache()
         {
             // if UseStreaming && !DisableCache then we already wrote the response to the cache
@@ -675,9 +660,13 @@ namespace BestHTTP
                 HTTPCacheService.IsSupported &&
                 HTTPCacheService.IsCacheble(CurrentRequest.CurrentUri, CurrentRequest.MethodType, CurrentRequest.Response))
             {
-                HTTPCacheService.Store(CurrentRequest.CurrentUri, CurrentRequest.MethodType, CurrentRequest.Response);
+                if(CurrentRequest.IsRedirected)
+                    HTTPCacheService.Store(CurrentRequest.Uri, CurrentRequest.MethodType, CurrentRequest.Response);
+                else
+                    HTTPCacheService.Store(CurrentRequest.CurrentUri, CurrentRequest.MethodType, CurrentRequest.Response);
             }
         }
+#endif
 
         private Uri GetRedirectUri(string location)
         {
@@ -701,58 +690,7 @@ namespace BestHTTP
             return result;
         }
 
-        internal void HandleProgressCallback()
-        {
-            if (CurrentRequest.OnProgress != null && CurrentRequest.DownloadProgressChanged)
-            {
-                try
-                {
-                    CurrentRequest.OnProgress(CurrentRequest, CurrentRequest.Downloaded, CurrentRequest.DownloadLength);
-                }
-                catch (Exception ex)
-                {
-                    HTTPManager.Logger.Exception("HTTPManager", "HandleProgressCallback - OnProgress", ex);
-                }
-
-                CurrentRequest.DownloadProgressChanged = false;
-            }
-
-            if (CurrentRequest.OnUploadProgress != null && CurrentRequest.UploadProgressChanged)
-            {
-                try
-                {
-                    CurrentRequest.OnUploadProgress(CurrentRequest, CurrentRequest.Uploaded, CurrentRequest.UploadLength);
-                }
-                catch (Exception ex)
-                {
-                    HTTPManager.Logger.Exception("HTTPManager", "HandleProgressCallback - OnUploadProgress", ex);
-                }
-                CurrentRequest.UploadProgressChanged = false;
-            }
-        }
-
-        internal void HandleCallback()
-        {
-            try
-            {
-                HandleProgressCallback();
-
-                if (State == HTTPConnectionStates.Upgraded)
-                {
-                    if (CurrentRequest != null && CurrentRequest.Response != null && CurrentRequest.Response.IsUpgraded)
-                        CurrentRequest.UpgradeCallback();
-                    State = HTTPConnectionStates.WaitForProtocolShutdown;
-                }
-                else
-                    CurrentRequest.CallCallback();
-            }
-            catch(Exception ex)
-            {
-                HTTPManager.Logger.Exception("HTTPManager", "HandleCallback", ex);
-            }
-        }
-
-        internal void Abort(HTTPConnectionStates newState)
+        internal override void Abort(HTTPConnectionStates newState)
         {
             State = newState;
 
@@ -786,12 +724,14 @@ namespace BestHTTP
             }
         }
 
-        public void Dispose()
-        {
-            Close();
-        }
-
         #endregion
 
+
+        protected override void Dispose(bool disposing)
+        {
+            Close();
+
+            base.Dispose(disposing);
+        }
     }
 }

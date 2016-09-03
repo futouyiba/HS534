@@ -1,3 +1,123 @@
+Starting in v1.9.0 there are many defines that can be used to disable a feature. These defines can be combined, even all can be set. Disabled features will not compile, so build size can be reduced by disabling unused features.
+These defines are the following:
+-BESTHTTP_DISABLE_COOKIES: With this define all cookie releated code can be disabled. No cookie parsing, saving and sending will occur.
+-BESTHTTP_DISABLE_CACHING: With this define all cache releated code can be disabled. No caching, or cache validation will be done.
+-BESTHTTP_DISABLE_SERVERSENT_EVENTS: Server-Sent Events can be disabled with this. SignalR will not fallback to this.
+-BESTHTTP_DISABLE_WEBSOCKET: Websocket can be disable with this. SignalR and Socket.IO will not use this protocol.
+-BESTHTTP_DISABLE_SIGNALR: The entire SignalR implementation will be disabled.
+-BESTHTTP_DISABLE_SOCKETIO: The entire Socket.IO implementation will be disabled.
+-BESTHTTP_DISABLE_ALTERNATE_SSL: If you are not using HTTPS or WSS for WebSocket, or you are happy with the default implementation, you can disable the alretnate ssl handler.
+-BESTHTTP_DISABLE_UNITY_FORM: You can remove the dependency on Unity's WWWForm.
+
+Upgrading to 1.9.x:
+In v1.9.0 all DLL dependencies are removed, and some of the files from the source too. So a clean install is advised: Before you install v1.9.x you have to remove the /Assets/Best HTTP (Pro)/ folder and TcpClientImplementation.dll from the /Assets/Plugins/, /Assets/Plugins/Metro and /Assets/Plugins/WP8 folders.
+
+1.9.9 (2016.02.16)
+General
+-[Bugfix] On redirection the plugin tried to load from the cache for the wrong uri
+-[Bugfix] On application exit HTTPUpdateDelegator will now shut down the update thread if it’s used
+-[Bugfix] Cookies will be sent for protocols other than http too
+-[Bugfix] Empty headers will no longer sent out
+-[Bugfix] Null values in headers will no longer cause an exception
+-[Improvement] Added some missing documentation.
+-[Improvement] Exception logging now will include inner exceptions too
+WebSockets
+-[New Feature] Support for extensions added
+-[New Feature] Per-Message Deflate compression extension added
+Socket.IO
+-[Improvement] Custom errors by middlewares are now supported
+-[Improvement] Socket.Options’ AdditionalQueryParams changed from Dictionary to ObservableDictionary to automatically delete the cached value when it’s changed
+-[Bugfix] The plugin will not decode the payload for Emit callbacks
+SignalR
+-[Improvement] AdditionalQueryParams changed from Dictionary to ObservableDictionary to automatically delete the cached value when it’s changed
+
+1.9.8 (2016.01.04)
+General
+-[Improvement] Download progress report will be more frequent now with Chunked encoding
+WebSockets
+-[Bugfix] Sending pings will not be capped on 100ms now
+-[Bugfix] [WebGL] Binary data sending and receiving will be handled correctly now
+
+1.9.7 (2015.12.13)
+General
+-[Bugfix] Improved compatibility with 5.3 coroutine changes
+-[Improvement] Example scripts are in a namespace too
+
+1.9.6 (2015.12.08)
+General
+-[Improvement] Changes made to greatly improve compatibility for Windows Store builds targeting IL2CPP scripting backend
+Socket.IO
+-[Improvement] The WebSocketTransport will send and Update packet to the server without any other payload to improve compatibility
+
+1.9.5 (2015.11.30)
+General
+-[Fix] The plugin will choose the Content-Length header when Content-Range present too
+-[Improvement] Improved threading of HTTPUpdateDelegator
+WebGL
+-[Fix] The plugin will not try to decode the content as chunked, as the browser done it already
+Socket.IO
+-[Fix] Fixed a rare bug where WebSocket transport tried to access a null object
+-[Improvement] An error event will be emitted on timeout too
+SignalR
+-[Improvement] Call functions now will return true if the plugin was able to send the message to the server
+
+1.9.4 (2015.10.16)
+General
+-[Bugfix] Fixed a possible connection error on editors running on non-windows
+-[Improvement] Added two more constructors to the Cookie class
+
+1.9.3 (2015.10.10)
+-WebGL support added! Check out the documentation about the limitations.
+General
+-[Improvement] Improved shutdown handling in the editor
+-[Improvement] Cache will work on redirect uris as expected
+-[Bugfix] Tcp channel disconnection is now detected much quicker
+SignalR
+-[Improvement] Added support for SignalR 2.0.x
+-[Improvement] Improved logging in some cases
+WebSocket
+-[Bugfix] The plugin will detect a lost connection sooner
+
+1.9.2 (2015.09.03)
+General
+-[Improvement] WP8 support is back!
+-[Improvement] Improved compatibility with Windows 10 Universal App build for Unity 5.2
+-[Improvement] Improved shutdown handling in the editor
+
+1.9.1 (2015.08.26)
+General
+-[Improvement] Improved error reporting on WSA platforms for TcpClient
+-[New feature] Initial and experimental file:// protocol support
+Socket.IO
+-[Bugfix] Emitting binary data wrongly converted
+SignalR
+-[Improvement] Improved logging
+ServerSentEvents
+-[Bugfix] Improved compatibility
+
+1.9.0 (2015.07.29)
+Windows Phone 8 silverlight based build support removed!
+General
+-[New Feature] Various features can be disabled now with the following defines:
+--+BESTHTTP_DISABLE_COOKIES
+--+BESTHTTP_DISABLE_CACHING
+--+BESTHTTP_DISABLE_SERVERSENT_EVENTS
+--+BESTHTTP_DISABLE_WEBSOCKET
+--+BESTHTTP_DISABLE_SIGNALR
+--+BESTHTTP_DISABLE_SOCKETIO
+--+BESTHTTP_DISABLE_ALTERNATE_SSL
+--+BESTHTTP_DISABLE_UNITY_FORM
+--+Check the manual on how you can set these in Unity: http://docs.unity3d.com/Manual/PlatformDependentCompilation.html
+-[Improvement] Removed DLL depenencies
+-[Improvement] Improved HTTPConnection teardown on quitting
+-[Improvement] Improved compatibility when used in an editor window
+-[Bugfix] Cookies are stored from redirections
+Socket.IO
+-[Bugfix] WebSocketTransport not switched to secure protocol when the Uri of the socket.io endpoint is HTTPS
+-[BugFix] Disconnect event not fired when the server initiated the disconnect (Thx go to Takayasu Oyama)
+SignalR
+-[Bugfix] WebSocketTransport not reconnected properly (Thx go to Jaakko Jumisko)
+
 1.8.2 (2015.06.26)
 General
 -[Improvement] HTTPResponse’s DataAsTexture2D will use the full constructor now

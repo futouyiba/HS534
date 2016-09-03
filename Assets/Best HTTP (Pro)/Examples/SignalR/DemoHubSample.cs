@@ -1,4 +1,20 @@
-﻿using System;
+/*
+http://www.cgsoso.com/forum-211-1.html
+
+CG搜搜 Unity3d 每日Unity3d插件免费更新 更有VIP资源！
+
+CGSOSO 主打游戏开发，影视设计等CG资源素材。
+
+插件如若商用，请务必官网购买！
+
+daily assets update for try.
+
+U should buy the asset from home store if u use it in your project!
+*/
+
+#if !BESTHTTP_DISABLE_SIGNALR
+
+using System;
 
 using UnityEngine;
 
@@ -6,10 +22,11 @@ using BestHTTP.SignalR;
 using BestHTTP.SignalR.Hubs;
 using BestHTTP.SignalR.Messages;
 using BestHTTP.SignalR.JsonEncoders;
+using BestHTTP.Examples;
 
 class DemoHubSample : MonoBehaviour
 {
-    readonly Uri URI = new Uri("http://besthttpsignalr.azurewebsites.net/signalr");
+    readonly Uri URI = new Uri("https://besthttpsignalr.azurewebsites.net/signalr");
 
     /// <summary>
     /// The SignalR connection instance
@@ -58,7 +75,6 @@ class DemoHubSample : MonoBehaviour
 
                 // Call the demo functions
 
-                demoHub.ReportProgress("Long running job!");
                 demoHub.AddToGroups();
                 demoHub.GetValue();
                 demoHub.TaskWithException();
@@ -69,6 +85,7 @@ class DemoHubSample : MonoBehaviour
                 demoHub.SimpleArray(new int[] { 5, 5, 6 });
                 demoHub.ComplexType(person);
                 demoHub.ComplexArray(new object[] { person, person, person });
+                demoHub.ReportProgress("Long running job!");
 
                 demoHub.Overload();
 
@@ -548,3 +565,5 @@ class DemoHub : Hub
 
     #endregion
 }
+
+#endif

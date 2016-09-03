@@ -1,9 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+/*
+http://www.cgsoso.com/forum-211-1.html
 
-using UnityEngine;
+CG搜搜 Unity3d 每日Unity3d插件免费更新 更有VIP资源！
+
+CGSOSO 主打游戏开发，影视设计等CG资源素材。
+
+插件如若商用，请务必官网购买！
+
+daily assets update for try.
+
+U should buy the asset from home store if u use it in your project!
+*/
+
+#if !BESTHTTP_DISABLE_SOCKETIO
+
+using System;
+using System.Collections.Generic;
 
 namespace BestHTTP.SocketIO
 {
@@ -80,8 +92,10 @@ namespace BestHTTP.SocketIO
                                                                         Manager.Options.BuildQueryParams())),
                                                OnHandshakeCallback);
 
+#if !BESTHTTP_DISABLE_CACHING && (!UNITY_WEBGL || UNITY_EDITOR)
             // Don't even try to cache it
             HandshakeRequest.DisableCache = true;
+#endif
             HandshakeRequest.Send();
 
             HTTPManager.Logger.Information("HandshakeData", "Handshake request sent");
@@ -223,3 +237,5 @@ namespace BestHTTP.SocketIO
         #endregion
     }
 }
+
+#endif

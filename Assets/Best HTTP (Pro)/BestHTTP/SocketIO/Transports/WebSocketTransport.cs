@@ -1,15 +1,27 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+/*
+http://www.cgsoso.com/forum-211-1.html
 
-using BestHTTP;
+CG搜搜 Unity3d 每日Unity3d插件免费更新 更有VIP资源！
+
+CGSOSO 主打游戏开发，影视设计等CG资源素材。
+
+插件如若商用，请务必官网购买！
+
+daily assets update for try.
+
+U should buy the asset from home store if u use it in your project!
+*/
+
+#if !BESTHTTP_DISABLE_SOCKETIO
+#if !BESTHTTP_DISABLE_WEBSOCKET
+
+using System;
+using System.Collections.Generic;
 
 namespace BestHTTP.SocketIO.Transports
 {
     using BestHTTP.WebSocket;
-    using BestHTTP.SocketIO.Events;
-
+    
     /// <summary>
     /// A transport implementation that can communicate with a SocketIO server.
     /// </summary>
@@ -36,8 +48,11 @@ namespace BestHTTP.SocketIO.Transports
             if (State != TransportStates.Closed)
                 return;
 
-            Uri uri = new Uri(string.Format("{0}?transport=websocket&sid={1}{2}", 
-                                             new UriBuilder("ws", Manager.Uri.Host, Manager.Uri.Port, Manager.Uri.PathAndQuery).Uri.ToString(),
+            Uri uri = new Uri(string.Format("{0}?transport=websocket&sid={1}{2}",
+                                             new UriBuilder(HTTPProtocolFactory.IsSecureProtocol(Manager.Uri) ? "wss" : "ws", 
+                                                            Manager.Uri.Host, 
+                                                            Manager.Uri.Port, 
+                                                            Manager.Uri.PathAndQuery).Uri.ToString(),
                                              Manager.Handshake.Sid,
                                              !Manager.Options.QueryParamsOnlyForHandshake ? Manager.Options.BuildQueryParams() : string.Empty));
 
@@ -64,7 +79,10 @@ namespace BestHTTP.SocketIO.Transports
 
             State = TransportStates.Closed;
 
-            Implementation.Close();
+            if (Implementation != null)
+                Implementation.Close();
+            else
+                HTTPManager.Logger.Warning("WebSocketTransport", "Close - WebSocket Implementation already null!");
             Implementation = null;
         }
 
@@ -84,6 +102,9 @@ namespace BestHTTP.SocketIO.Transports
         /// </summary>
         private void OnOpen(WebSocket ws)
         {
+            if (ws != Implementation)
+                return;
+
             HTTPManager.Logger.Information("WebSocketTransport", "OnOpen");
 
             State = TransportStates.Opening;
@@ -97,6 +118,9 @@ namespace BestHTTP.SocketIO.Transports
         /// </summary>
         private void OnMessage(WebSocket ws, string message)
         {
+            if (ws != Implementation)
+                return;
+
             if (HTTPManager.Logger.Level <= BestHTTP.Logger.Loglevels.All)
                 HTTPManager.Logger.Verbose("WebSocketTransport", "OnMessage: " + message);
 
@@ -119,6 +143,9 @@ namespace BestHTTP.SocketIO.Transports
         /// </summary>
         private void OnBinary(WebSocket ws, byte[] data)
         {
+            if (ws != Implementation)
+                return;
+
             if (HTTPManager.Logger.Level <= BestHTTP.Logger.Loglevels.All)
                 HTTPManager.Logger.Verbose("WebSocketTransport", "OnBinary");
 
@@ -153,12 +180,16 @@ namespace BestHTTP.SocketIO.Transports
         /// </summary>
         private void OnError(WebSocket ws, Exception ex)
         {
+            if (ws != Implementation)
+                return;
+
             string errorStr = string.Empty;
 
             if (ex != null)
                 errorStr = (ex.Message + " " + ex.StackTrace);
             else
             {
+#if !UNITY_WEBGL || UNITY_EDITOR
                 switch (ws.InternalRequest.State)
                 {
                     // The request finished without any problem.
@@ -192,6 +223,7 @@ namespace BestHTTP.SocketIO.Transports
                         errorStr = "Processing the request Timed Out!";
                         break;
                 }
+#endif
             }
 
             HTTPManager.Logger.Error("WebSocketTransport", "OnError: " + errorStr);
@@ -204,6 +236,9 @@ namespace BestHTTP.SocketIO.Transports
         /// </summary>
         private void OnClosed(WebSocket ws, ushort code, string message)
         {
+            if (ws != Implementation)
+              return;
+
             HTTPManager.Logger.Information("WebSocketTransport", "OnClosed");
 
             Close();
@@ -211,9 +246,9 @@ namespace BestHTTP.SocketIO.Transports
             (Manager as IManager).TryToReconnect();
         }
 
-        #endregion
+#endregion
 
-        #region Packet Sending Implementation
+#region Packet Sending Implementation
 
         /// <summary>
         /// A WebSocket implementation of the packet sending.
@@ -272,9 +307,9 @@ namespace BestHTTP.SocketIO.Transports
             packets.Clear();
         }
 
-        #endregion
+#endregion
 
-        #region Packet Handling
+#region Packet Handling
 
         /// <summary>
         /// Will only process packets that need to upgrade. All other packets are passed to the Manager.
@@ -284,7 +319,8 @@ namespace BestHTTP.SocketIO.Transports
             switch (packet.TransportEvent)
             {
                 case TransportEventTypes.Message:
-                    if (packet.SocketIOEvent == SocketIOEventTypes.Connect && this.State == TransportStates.Opening)
+                case TransportEventTypes.Noop:
+                    if (this.State == TransportStates.Opening)
                     {
                         // This transport are no open
                         State = TransportStates.Open;
@@ -302,8 +338,8 @@ namespace BestHTTP.SocketIO.Transports
                     {
                         HTTPManager.Logger.Information("WebSocketTransport", "\"probe\" packet received, sending Upgrade packet");
 
-                        // We will send an Upgrade("52") packet.
-                        Send(new Packet(TransportEventTypes.Upgrade, SocketIOEventTypes.Event, "/", string.Empty));
+                        // We will send an Upgrade("5") packet.
+                        Send(new Packet(TransportEventTypes.Upgrade, SocketIOEventTypes.Unknown, "/", string.Empty));
                     }
 
                     goto default;
@@ -314,6 +350,9 @@ namespace BestHTTP.SocketIO.Transports
             }
         }
 
-        #endregion
+#endregion
     }
 }
+
+#endif
+#endif

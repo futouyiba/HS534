@@ -1,4 +1,20 @@
-﻿using System;
+/*
+http://www.cgsoso.com/forum-211-1.html
+
+CG搜搜 Unity3d 每日Unity3d插件免费更新 更有VIP资源！
+
+CGSOSO 主打游戏开发，影视设计等CG资源素材。
+
+插件如若商用，请务必官网购买！
+
+daily assets update for try.
+
+U should buy the asset from home store if u use it in your project!
+*/
+
+#if !BESTHTTP_DISABLE_SIGNALR
+
+using System;
 using System.Collections.Generic;
 
 using UnityEngine;
@@ -6,6 +22,7 @@ using BestHTTP.SignalR;
 using BestHTTP.SignalR.Hubs;
 using BestHTTP.SignalR.Messages;
 using BestHTTP.SignalR.Authentication;
+using BestHTTP.Examples;
 
 class AuthenticationSample : MonoBehaviour
 {
@@ -35,9 +52,9 @@ class AuthenticationSample : MonoBehaviour
                                                 new BaseHub("authhub", "Messages Requiring Authentication to Send or Receive"),
                                                 new BaseHub("inheritauthhub", "Messages Requiring Authentication to Send or Receive Because of Inheritance"),
                                                 new BaseHub("incomingauthhub", "Messages Requiring Authentication to Send"),
-                                                new BaseHub("adminauthhub", "Messages Requiring Admin Membership to Send or Receive"),                            
+                                                new BaseHub("adminauthhub", "Messages Requiring Admin Membership to Send or Receive"),
                                                 new BaseHub("userandroleauthhub", "Messages Requiring Name to be \"User\" and Role to be \"Admin\" to Send or Receive"));
-        
+
         // Set the authenticator if we have valid fields
         if (!string.IsNullOrEmpty(userName) && !string.IsNullOrEmpty(role))
             signalRConnection.AuthenticationProvider = new HeaderAuthenticator(userName, role);
@@ -201,3 +218,5 @@ class BaseHub : Hub
         GUILayout.EndHorizontal();
     }
 }
+
+#endif
