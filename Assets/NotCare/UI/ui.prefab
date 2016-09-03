@@ -1,0 +1,436 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &100000
+GameObject:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  serializedVersion: 4
+  m_Component:
+  - 4: {fileID: 400000}
+  - 114: {fileID: 11400000}
+  m_Layer: 0
+  m_Name: ui
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &400000
+Transform:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 100000}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 0
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 100000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4d0c51bb0b6e93049af5e88f93826e3b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  material: {fileID: 2100000, guid: f58f26b860e7da143bca58bc60804af0, type: 2}
+  sprites:
+  - name: gold
+    outer:
+      serializedVersion: 2
+      x: 715
+      y: 410
+      width: 120
+      height: 124
+    inner:
+      serializedVersion: 2
+      x: 715
+      y: 410
+      width: 120
+      height: 124
+    rotated: 0
+    paddingLeft: .0250000004
+    paddingRight: .0416666679
+    paddingTop: 0
+    paddingBottom: .0322580636
+  - name: golddi
+    outer:
+      serializedVersion: 2
+      x: 0
+      y: 1
+      width: 250
+      height: 41
+    inner:
+      serializedVersion: 2
+      x: 0
+      y: 1
+      width: 250
+      height: 41
+    rotated: 0
+    paddingLeft: .00800000038
+    paddingRight: .0160000008
+    paddingTop: .024390243
+    paddingBottom: .024390243
+  - name: chat 1
+    outer:
+      serializedVersion: 2
+      x: 836
+      y: 485
+      width: 118
+      height: 49
+    inner:
+      serializedVersion: 2
+      x: 836
+      y: 485
+      width: 118
+      height: 49
+    rotated: 0
+    paddingLeft: .0593220331
+    paddingRight: .0254237279
+    paddingTop: .0816326514
+    paddingBottom: .10204082
+  - name: set
+    outer:
+      serializedVersion: 2
+      x: 625
+      y: 138
+      width: 73
+      height: 50
+    inner:
+      serializedVersion: 2
+      x: 625
+      y: 138
+      width: 73
+      height: 50
+    rotated: 0
+    paddingLeft: .0273972601
+    paddingRight: .0547945201
+    paddingTop: .180000007
+    paddingBottom: .140000001
+  - name: "\u672A\u6807\u9898-8"
+    outer:
+      serializedVersion: 2
+      x: 1081
+      y: 857
+      width: 575
+      height: 96
+    inner:
+      serializedVersion: 2
+      x: 1081
+      y: 857
+      width: 575
+      height: 96
+    rotated: 0
+    paddingLeft: 0
+    paddingRight: 0
+    paddingTop: .03125
+    paddingBottom: .0416666679
+  - name: "\u672A\u6807\u9898-3"
+    outer:
+      serializedVersion: 2
+      x: 1081
+      y: 761
+      width: 451
+      height: 95
+    inner:
+      serializedVersion: 2
+      x: 1081
+      y: 761
+      width: 451
+      height: 95
+    rotated: 0
+    paddingLeft: .0155210644
+    paddingRight: .0221729483
+    paddingTop: .042105265
+    paddingBottom: .0631578937
+  - name: "\u672A\u6807\u9898-6"
+    outer:
+      serializedVersion: 2
+      x: 625
+      y: 189
+      width: 71
+      height: 66
+    inner:
+      serializedVersion: 2
+      x: 625
+      y: 189
+      width: 71
+      height: 66
+    rotated: 0
+    paddingLeft: .0563380271
+    paddingRight: .140845075
+    paddingTop: .106060609
+    paddingBottom: .106060609
+  - name: "\u672A\u6807\u9898-4"
+    outer:
+      serializedVersion: 2
+      x: 625
+      y: 256
+      width: 79
+      height: 63
+    inner:
+      serializedVersion: 2
+      x: 625
+      y: 256
+      width: 79
+      height: 63
+    rotated: 0
+    paddingLeft: 0
+    paddingRight: 0
+    paddingTop: 0
+    paddingBottom: 0
+  - name: "\u672A\u6807\u9898-1"
+    outer:
+      serializedVersion: 2
+      x: 625
+      y: 54
+      width: 40
+      height: 83
+    inner:
+      serializedVersion: 2
+      x: 625
+      y: 54
+      width: 40
+      height: 83
+    rotated: 0
+    paddingLeft: 0
+    paddingRight: 0
+    paddingTop: 0
+    paddingBottom: 0
+  - name: "\u672A\u6807\u9898-9"
+    outer:
+      serializedVersion: 2
+      x: 1081
+      y: 954
+      width: 890
+      height: 70
+    inner:
+      serializedVersion: 2
+      x: 1081
+      y: 954
+      width: 890
+      height: 70
+    rotated: 0
+    paddingLeft: .0179775283
+    paddingRight: .0292134825
+    paddingTop: 0
+    paddingBottom: .214285716
+  - name: "\u672A\u6807\u9898-2"
+    outer:
+      serializedVersion: 2
+      x: 715
+      y: 611
+      width: 365
+      height: 413
+    inner:
+      serializedVersion: 2
+      x: 743
+      y: 636
+      width: 312
+      height: 369
+    rotated: 0
+    paddingLeft: 0
+    paddingRight: 0
+    paddingTop: 0
+    paddingBottom: 0
+  - name: "\u672A\u6807\u9898-7"
+    outer:
+      serializedVersion: 2
+      x: 666
+      y: 103
+      width: 47
+      height: 34
+    inner:
+      serializedVersion: 2
+      x: 666
+      y: 103
+      width: 47
+      height: 34
+    rotated: 0
+    paddingLeft: .106382981
+    paddingRight: .148936167
+    paddingTop: .14705883
+    paddingBottom: .352941185
+  - name: "\u672A\u6807\u9898-15"
+    outer:
+      serializedVersion: 2
+      x: 0
+      y: 43
+      width: 624
+      height: 276
+    inner:
+      serializedVersion: 2
+      x: 28
+      y: 78
+      width: 562
+      height: 208
+    rotated: 0
+    paddingLeft: 0
+    paddingRight: 0
+    paddingTop: 0
+    paddingBottom: 0
+  - name: "\u672A\u6807\u9898-11"
+    outer:
+      serializedVersion: 2
+      x: 715
+      y: 360
+      width: 207
+      height: 27
+    inner:
+      serializedVersion: 2
+      x: 752
+      y: 360
+      width: 131
+      height: 27
+    rotated: 0
+    paddingLeft: 0
+    paddingRight: 0
+    paddingTop: 0
+    paddingBottom: 0
+  - name: "\u672A\u6807\u9898-5"
+    outer:
+      serializedVersion: 2
+      x: 251
+      y: 21
+      width: 361
+      height: 21
+    inner:
+      serializedVersion: 2
+      x: 251
+      y: 21
+      width: 361
+      height: 21
+    rotated: 0
+    paddingLeft: 0
+    paddingRight: 0
+    paddingTop: 0
+    paddingBottom: 0
+  - name: "\u672A\u6807\u9898-10"
+    outer:
+      serializedVersion: 2
+      x: 0
+      y: 320
+      width: 714
+      height: 704
+    inner:
+      serializedVersion: 2
+      x: 58
+      y: 385
+      width: 590
+      height: 578
+    rotated: 0
+    paddingLeft: 0
+    paddingRight: 0
+    paddingTop: 0
+    paddingBottom: 0
+  - name: "\u672A\u6807\u9898-13"
+    outer:
+      serializedVersion: 2
+      x: 1657
+      y: 885
+      width: 374
+      height: 68
+    inner:
+      serializedVersion: 2
+      x: 1720
+      y: 885
+      width: 251
+      height: 68
+    rotated: 0
+    paddingLeft: 0
+    paddingRight: 0
+    paddingTop: 0
+    paddingBottom: 0
+  - name: "\u672A\u6807\u9898-12"
+    outer:
+      serializedVersion: 2
+      x: 715
+      y: 133
+      width: 9
+      height: 226
+    inner:
+      serializedVersion: 2
+      x: 715
+      y: 133
+      width: 9
+      height: 226
+    rotated: 0
+    paddingLeft: 0
+    paddingRight: 0
+    paddingTop: 0
+    paddingBottom: 0
+  - name: "\u672A\u6807\u9898-14"
+    outer:
+      serializedVersion: 2
+      x: 715
+      y: 388
+      width: 361
+      height: 21
+    inner:
+      serializedVersion: 2
+      x: 715
+      y: 388
+      width: 361
+      height: 21
+    rotated: 0
+    paddingLeft: 0
+    paddingRight: 0
+    paddingTop: 0
+    paddingBottom: 0
+  - name: btnbg
+    outer:
+      serializedVersion: 2
+      x: 715
+      y: 535
+      width: 231
+      height: 75
+    inner:
+      serializedVersion: 2
+      x: 783
+      y: 535
+      width: 101
+      height: 75
+    rotated: 0
+    paddingLeft: 0
+    paddingRight: 0
+    paddingTop: 0
+    paddingBottom: 0
+  - name: btnfront
+    outer:
+      serializedVersion: 2
+      x: 947
+      y: 557
+      width: 128
+      height: 53
+    inner:
+      serializedVersion: 2
+      x: 970
+      y: 557
+      width: 78
+      height: 53
+    rotated: 0
+    paddingLeft: 0
+    paddingRight: 0
+    paddingTop: 0
+    paddingBottom: 0
+  mCoordinates: 0
+  mPixelSize: 1
+  mReplacement: {fileID: 0}
+--- !u!1001 &100100000
+Prefab:
+  m_ObjectHideFlags: 1
+  serializedVersion: 2
+  m_Modification:
+    m_TransformParent: {fileID: 0}
+    m_Modifications: []
+    m_RemovedComponents: []
+  m_ParentPrefab: {fileID: 0}
+  m_RootGameObject: {fileID: 100000}
+  m_IsPrefabParent: 1
+  m_IsExploded: 1
