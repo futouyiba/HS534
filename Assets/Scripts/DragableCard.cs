@@ -13,6 +13,7 @@ public class DragableCard : MonoBehaviour
     // Use this for initialization
     void Start()
     {
+
         mgr = placeManager.GetComponent<PlaceManager>();
         cardModel = gameObject.GetComponent<CardModel>();
     }
