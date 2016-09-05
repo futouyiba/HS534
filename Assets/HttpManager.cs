@@ -8,6 +8,8 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using System.Linq;
 using System.Xml.Linq;
+using BestHTTP.SocketIO;
+
 
 
 public class HttpManager : MonoBehaviour {
@@ -19,18 +21,16 @@ public class HttpManager : MonoBehaviour {
     public CardsRepo cards;
 	// Use this for initialization
 	void Start () {
-        TextAsset asset = Resources.Load("card-info") as TextAsset;
-        cards = JsonConvert.DeserializeObject<CardsRepo>(asset.text);
-        var data = new TestData
-        {
-            PlayerName = "xxx",
-            Level = 10,
-            Exp = 123,
-        };
-        var serializedData = JsonConvert.SerializeObject(data);
-        Debug.Log("Serialized:" + serializedData);
-        var deserialzedData = JsonConvert.DeserializeObject<TestData>(serializedData);
-        Debug.Log("Deserialized:" + deserialzedData);
+//		var manager = new SocketManager(new System.Uri("http://192.168.4.29:5000/socket.io/"));
+//		Socket root = manager.Socket;
+//        TextAsset asset = Resources.Load("card-info") as TextAsset;
+//		dynamic stuff = JsonConvert.DeserializeObject(asset.text);
+//		Debug.Log(stuff);
+//        cards = JsonConvert.DeserializeObject<CardsRepo>(asset.text);
+
+//        TextAsset asset = Resources.Load("cgRes") as TextAsset;
+//		var deserialzedData = JsonConvert.DeserializeObject<Resp>(asset.text);
+//        Debug.Log("Deserialized:" + deserialzedData);
 	}
 
 	// Update is called once per frame
@@ -106,4 +106,9 @@ public class TestData
     {
         return string.Format("PlayerName={0}, Level={1}, Exp={2}", PlayerName, Level, Exp);
     }
+}
+
+public class Resp{
+	public int result;
+	public string game;
 }
