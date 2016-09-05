@@ -57,6 +57,7 @@ public class HttpManager : MonoBehaviour {
 
 	public void OnGetFinished(HTTPRequest request, HTTPResponse response){
 		respText = response.DataAsText;
+
 		Debug.Log("Request Finished! Text received: " + response.DataAsText);
 		text.text = "Request Finished! Text received: " + response.DataAsText;
 		if (respText != null){
