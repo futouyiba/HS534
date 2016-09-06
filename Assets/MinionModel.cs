@@ -2,9 +2,9 @@
 using System.Collections;
 using HutongGames.PlayMaker;
 
-public class CardModel : MonoBehaviour
+public class MinionModel : MonoBehaviour
 {
-    public int indexCard;
+    public int indexMinion;
     public int side;
     public GameObject gameManager;
     public SockM sockM;
@@ -35,7 +35,7 @@ public class CardModel : MonoBehaviour
     {
         if (side == 1) { return; }
         if (mgrFSM.ActiveStateName != "TurnReady") { return; }
-        sockM.suffix = "/play/" + indexCard;
+        sockM.suffix = "/attack/" + indexMinion;
         mgrFSM.SendEvent("ChooseAction");
 
     }
