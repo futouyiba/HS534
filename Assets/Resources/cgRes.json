@@ -1,1 +1,302 @@
-{"result": 1, "game": { "players": [ { "auras": [], "weapon": null, "hero": { "name": "Gul'dan", "attack": 0, "attacks_performed": 0, "used_windfury": false, "health": 30, "armor": 0, "immune": 0, "character": "Warlock" }, "mana": 0, "secrets": [], "upcoming_overload": 0, "hand": [], "current_overload": 0, "deck": [ { "name": "Shieldbearer", "used": false }, { "name": "Shieldbearer", "used": false }, { "name": "Flame Imp", "used": false }, { "name": "Flame Imp", "used": false }, { "name": "Young Priestess", "used": false }, { "name": "Young Priestess", "used": false }, { "name": "Dark Iron Dwarf", "used": false }, { "name": "Dark Iron Dwarf", "used": false }, { "name": "Dire Wolf Alpha", "used": false }, { "name": "Dire Wolf Alpha", "used": false }, { "name": "Voidwalker", "used": false }, { "name": "Voidwalker", "used": false }, { "name": "Harvest Golem", "used": false }, { "name": "Harvest Golem", "used": false }, { "name": "Knife Juggler", "used": false }, { "name": "Knife Juggler", "used": false }, { "name": "Shattered Sun Cleric", "used": false }, { "name": "Shattered Sun Cleric", "used": false }, { "name": "Argent Squire", "used": false }, { "name": "Argent Squire", "used": false }, { "name": "Doomguard", "used": false }, { "name": "Doomguard", "used": false }, { "name": "Soulfire", "used": false }, { "name": "Soulfire", "used": false }, { "name": "Defender of Argus", "used": false }, { "name": "Defender of Argus", "used": false }, { "name": "Abusive Sergeant", "used": false }, { "name": "Abusive Sergeant", "used": false }, { "name": "Nerubian Egg", "used": false }, { "name": "Nerubian Egg", "used": false } ], "effects": [], "name": "opponent", "minions": [], "max_mana": 0, "graveyard": [] }, { "auras": [], "weapon": null, "hero": { "name": "Gul'dan", "attack": 0, "attacks_performed": 0, "used_windfury": false, "health": 30, "armor": 0, "immune": 0, "character": "Warlock" }, "mana": 0, "secrets": [], "upcoming_overload": 0, "hand": [], "current_overload": 0, "deck": [ { "name": "Shieldbearer", "used": false }, { "name": "Shieldbearer", "used": false }, { "name": "Flame Imp", "used": false }, { "name": "Flame Imp", "used": false }, { "name": "Young Priestess", "used": false }, { "name": "Young Priestess", "used": false }, { "name": "Dark Iron Dwarf", "used": false }, { "name": "Dark Iron Dwarf", "used": false }, { "name": "Dire Wolf Alpha", "used": false }, { "name": "Dire Wolf Alpha", "used": false }, { "name": "Voidwalker", "used": false }, { "name": "Voidwalker", "used": false }, { "name": "Harvest Golem", "used": false }, { "name": "Harvest Golem", "used": false }, { "name": "Knife Juggler", "used": false }, { "name": "Knife Juggler", "used": false }, { "name": "Shattered Sun Cleric", "used": false }, { "name": "Shattered Sun Cleric", "used": false }, { "name": "Argent Squire", "used": false }, { "name": "Argent Squire", "used": false }, { "name": "Doomguard", "used": false }, { "name": "Doomguard", "used": false }, { "name": "Soulfire", "used": false }, { "name": "Soulfire", "used": false }, { "name": "Defender of Argus", "used": false }, { "name": "Defender of Argus", "used": false }, { "name": "Abusive Sergeant", "used": false }, { "name": "Abusive Sergeant", "used": false }, { "name": "Nerubian Egg", "used": false }, { "name": "Nerubian Egg", "used": false } ], "effects": [], "name": "uct", "minions": [], "max_mana": 0, "graveyard": [] } ], "current_sequence_id": 0, "turn_count": 0, "active_player": 1 }}
+{
+  "result": 1,
+  "game": {
+    "players": [
+      {
+        "auras": [],
+        "weapon": null,
+        "hero": {
+          "name": "Gul'dan",
+          "attack": 0,
+          "attacks_performed": 0,
+          "used_windfury": false,
+          "health": 30,
+          "armor": 0,
+          "immune": 0,
+          "character": "Warlock"
+        },
+        "mana": 0,
+        "secrets": [],
+        "upcoming_overload": 0,
+        "hand": [],
+        "current_overload": 0,
+        "deck": [
+          {
+            "name": "Shieldbearer",
+            "used": false
+          },
+          {
+            "name": "Shieldbearer",
+            "used": false
+          },
+          {
+            "name": "Flame Imp",
+            "used": false
+          },
+          {
+            "name": "Flame Imp",
+            "used": false
+          },
+          {
+            "name": "Young Priestess",
+            "used": false
+          },
+          {
+            "name": "Young Priestess",
+            "used": false
+          },
+          {
+            "name": "Dark Iron Dwarf",
+            "used": false
+          },
+          {
+            "name": "Dark Iron Dwarf",
+            "used": false
+          },
+          {
+            "name": "Dire Wolf Alpha",
+            "used": false
+          },
+          {
+            "name": "Dire Wolf Alpha",
+            "used": false
+          },
+          {
+            "name": "Voidwalker",
+            "used": false
+          },
+          {
+            "name": "Voidwalker",
+            "used": false
+          },
+          {
+            "name": "Harvest Golem",
+            "used": false
+          },
+          {
+            "name": "Harvest Golem",
+            "used": false
+          },
+          {
+            "name": "Knife Juggler",
+            "used": false
+          },
+          {
+            "name": "Knife Juggler",
+            "used": false
+          },
+          {
+            "name": "Shattered Sun Cleric",
+            "used": false
+          },
+          {
+            "name": "Shattered Sun Cleric",
+            "used": false
+          },
+          {
+            "name": "Argent Squire",
+            "used": false
+          },
+          {
+            "name": "Argent Squire",
+            "used": false
+          },
+          {
+            "name": "Doomguard",
+            "used": false
+          },
+          {
+            "name": "Doomguard",
+            "used": false
+          },
+          {
+            "name": "Soulfire",
+            "used": false
+          },
+          {
+            "name": "Soulfire",
+            "used": false
+          },
+          {
+            "name": "Defender of Argus",
+            "used": false
+          },
+          {
+            "name": "Defender of Argus",
+            "used": false
+          },
+          {
+            "name": "Abusive Sergeant",
+            "used": false
+          },
+          {
+            "name": "Abusive Sergeant",
+            "used": false
+          },
+          {
+            "name": "Nerubian Egg",
+            "used": false
+          },
+          {
+            "name": "Nerubian Egg",
+            "used": false
+          }
+        ],
+        "effects": [],
+        "name": "opponent",
+        "minions": [],
+        "max_mana": 0,
+        "graveyard": []
+      },
+      {
+        "auras": [],
+        "weapon": null,
+        "hero": {
+          "name": "Gul'dan",
+          "attack": 0,
+          "attacks_performed": 0,
+          "used_windfury": false,
+          "health": 30,
+          "armor": 0,
+          "immune": 0,
+          "character": "Warlock"
+        },
+        "mana": 0,
+        "secrets": [],
+        "upcoming_overload": 0,
+        "hand": [],
+        "current_overload": 0,
+        "deck": [
+          {
+            "name": "Shieldbearer",
+            "used": false
+          },
+          {
+            "name": "Shieldbearer",
+            "used": false
+          },
+          {
+            "name": "Flame Imp",
+            "used": false
+          },
+          {
+            "name": "Flame Imp",
+            "used": false
+          },
+          {
+            "name": "Young Priestess",
+            "used": false
+          },
+          {
+            "name": "Young Priestess",
+            "used": false
+          },
+          {
+            "name": "Dark Iron Dwarf",
+            "used": false
+          },
+          {
+            "name": "Dark Iron Dwarf",
+            "used": false
+          },
+          {
+            "name": "Dire Wolf Alpha",
+            "used": false
+          },
+          {
+            "name": "Dire Wolf Alpha",
+            "used": false
+          },
+          {
+            "name": "Voidwalker",
+            "used": false
+          },
+          {
+            "name": "Voidwalker",
+            "used": false
+          },
+          {
+            "name": "Harvest Golem",
+            "used": false
+          },
+          {
+            "name": "Harvest Golem",
+            "used": false
+          },
+          {
+            "name": "Knife Juggler",
+            "used": false
+          },
+          {
+            "name": "Knife Juggler",
+            "used": false
+          },
+          {
+            "name": "Shattered Sun Cleric",
+            "used": false
+          },
+          {
+            "name": "Shattered Sun Cleric",
+            "used": false
+          },
+          {
+            "name": "Argent Squire",
+            "used": false
+          },
+          {
+            "name": "Argent Squire",
+            "used": false
+          },
+          {
+            "name": "Doomguard",
+            "used": false
+          },
+          {
+            "name": "Doomguard",
+            "used": false
+          },
+          {
+            "name": "Soulfire",
+            "used": false
+          },
+          {
+            "name": "Soulfire",
+            "used": false
+          },
+          {
+            "name": "Defender of Argus",
+            "used": false
+          },
+          {
+            "name": "Defender of Argus",
+            "used": false
+          },
+          {
+            "name": "Abusive Sergeant",
+            "used": false
+          },
+          {
+            "name": "Abusive Sergeant",
+            "used": false
+          },
+          {
+            "name": "Nerubian Egg",
+            "used": false
+          },
+          {
+            "name": "Nerubian Egg",
+            "used": false
+          }
+        ],
+        "effects": [],
+        "name": "uct",
+        "minions": [],
+        "max_mana": 0,
+        "graveyard": []
+      }
+    ],
+    "current_sequence_id": 0,
+    "turn_count": 0,
+    "active_player": 1
+  }
+}
