@@ -63,11 +63,51 @@ public class ViewManager : MonoBehaviour
         return "image not found!";
     }
 
+    //public var GetCardInfoFromName(string nameMatched)
+    //{
+    //    var all = from item in doc.Element("lushi").Elements()
+    //              where item.Element("name").Value.Equals(nameMatched)
+    //              select new Dictionary<string>
+    //              {
+    //                  name = item.Element("name"),
+    //                  image = item.Element("image"),
+    //                  set = item.Element("set"),
+    //                  quality = item.Element("quality"),
+    //                  type = item.Element("type"),
+    //                  cost = item.Element("cost"),
+    //                  attack = item.Element("attack"),
+    //                  health = item.Element("health"),
+    //                  cnname = item.Element("cnname"),
+    //                  cndescription = item.Element("cndescription"),
+
+    //              };
+    //    foreach (var card in all)
+    //    {
+    //        return card;
+    //    }
+    //    return "image not found!";
+    //}
+
     // Update is called once per frame
     void Update()
     {
 
     }
+    public void UpdateGameView()
+    {
+        ShowHandCards();
+        ShowMinions();
+        UpdateHeroHealth();
+        HideSlotButtons();
+    }
+
+    public void UpdateHeroHealth()
+    {
+        GameObject.FindWithTag("MyHeroHealth").GetComponent<UILabel>().text = res.game.players[0].hero.health.ToString();
+        GameObject.FindWithTag("EnemyHeroHealth").GetComponent<UILabel>().text = res.game.players[1].hero.health.ToString();
+
+    }
+
     public void EraseHandCards()
     {
         foreach (var card in handCards)
@@ -84,24 +124,24 @@ public class ViewManager : MonoBehaviour
     public void ShowHandCards()
     {
         EraseHandCards();
-        string[] handInfo = res.game.players[0].hand;
+        Hand[] handInfo = res.game.players[0].hand;
         var originPos = handCardOrigin.position;
         int len = handInfo.Length;
         for (int i = 0; i < len; i++)
         {
             var handCard = Instantiate(handcardPrefab, originPos+i*handCardOffset, Quaternion.identity) as GameObject;
-            SetCardFromInfo(handCard, handInfo[i]);
+            SetCardFromInfo(handCard, handInfo[i].name);
             handCards.Add(handCard);
             handCard.GetComponent<CardModel>().indexCard = i;
             handCard.GetComponent<CardModel>().side = 0;
 
         }
-        string[] oppCardsInfo = res.game.players[1].hand;
+        Hand[] oppCardsInfo = res.game.players[1].hand;
         int oppLen = oppCardsInfo.Length;
         for (int i = 0; i < oppLen; i++)
         {
             var oppHandCard = Instantiate(handcardPrefab, originPos + i * handCardOffset, Quaternion.identity) as GameObject;
-            SetCardFromInfo(oppHandCard, oppCardsInfo[i]);
+            SetCardFromInfo(oppHandCard, oppCardsInfo[i].name);
             oppHandCards.Add(oppHandCard);
             oppHandCard.GetComponent<CardModel>().side = 1;
             oppHandCard.GetComponent<CardModel>().indexCard = i;
@@ -168,8 +208,9 @@ public class ViewManager : MonoBehaviour
 
     }
 
-    public void ShowSlotButtons(int num)
+    public void ShowSlotButtons()
     {
+        int num = minions.Count;
         for (int i = 0; i < num; i++)
         {
             minionSlotButtons[i].enabled = true;

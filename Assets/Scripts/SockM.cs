@@ -148,12 +148,13 @@ public class Game
 public class Player
 {
     //public string weapon;
+    public Hero hero;
     public int mana;
     public DeckCard[] deck;
     public int active_player;
     public int current_sequence_id;
     public int turn_count;
-    public string[] hand;
+    public Hand[] hand;
     public Minion[] minions;
 }
 
@@ -161,6 +162,10 @@ public class DeckCard
 {
     public string name;
     public bool used;
+}
+public class Hand
+{
+    public string name;
 }
 
 public class Minion
@@ -177,5 +182,12 @@ public class Minion
     public int frozen_for;
     //public Effect[]    effects;
     //public Aura[]    auras;
+}
+
+public class Hero
+{
+    public int health;
+    public int armor;
+    public int attack; 
 }
 
