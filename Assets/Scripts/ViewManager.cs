@@ -153,8 +153,21 @@ public class ViewManager : MonoBehaviour
     {
         card.transform.FindChild("pic").gameObject.GetComponent<MeshRenderer>().material = new Material(Shader.Find(" Diffuse"));
         var mat = card.transform.FindChild("pic").gameObject.GetComponent<MeshRenderer>().material;
-        string imgName = GetImgFromName(cardName);
-        mat.mainTexture = (Resources.Load("/card_pics/" + imgName) as Texture2D);
+        var all = from item in doc.Element("lushi").Elements()
+                  where item.Element("name").Value.Equals(nameMatched)
+                  select item;
+        foreach (var item in all)
+        {
+            //return one.image.Value;
+            mat.mainTexture = (Resources.Load("/card_pics/" + item.Element("image").Value) as Texture2D);
+            card.transform.FindChild("attack").GetComponent<UILabel>().text = item.Element("attack").Value;
+            card.transform.FindChild("health").GetComponent<UILabel>().text = item.Element("health").Value;
+            card.transform.FindChild("cost").GetComponent<UILabel>().text = item.Element("cost").Value;
+            card.transform.FindChild("name").GetComponent<UILabel>().text = item.Element("cnname").Value;
+            card.transform.FindChild("description").GetComponent<UILabel>().text = item.Element("cndescription").Value;
+            card.transform.FindChild("race").GetComponent<UILabel>().text = item.Element("race").Value;
+        }
+
     }
 
     public void ShowMinions()
@@ -192,6 +205,7 @@ public class ViewManager : MonoBehaviour
         {
             minion.transform.FindChild("lz").gameObject.SetActive(true);
         }
+        else { minion.transform.FindChild("lz").gameObject.SetActive(false); }
     }
 
     void EraseMinions()
