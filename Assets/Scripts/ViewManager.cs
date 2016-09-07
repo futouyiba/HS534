@@ -93,12 +93,13 @@ public class ViewManager : MonoBehaviour
     {
 
     }
-    public void UpdateGameView()
+    public void ShowGameView()
     {
         ShowHandCards();
         ShowMinions();
         UpdateHeroHealth();
         HideSlotButtons();
+        return;
     }
 
     public void UpdateHeroHealth()

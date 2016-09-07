@@ -137,6 +137,7 @@ public class Response
     public int result;
     public Game game;
     public string next;
+    public int[] choose_from;
 }
 
 public class Game
